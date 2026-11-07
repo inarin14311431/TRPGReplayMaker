@@ -1,4 +1,7 @@
 import { Router } from 'express';
+import { join } from 'node:path';
+import { config as env } from '../config/env.js';
+import { serveReplayAudio } from '../replay/audio-preview.js';
 import { requireAdmin } from './auth.js';
 import { getGuildConfig } from '../store/config.js';
 import { getSummarizer } from '../adapters/summarizer/index.js';
@@ -27,7 +30,7 @@ function numberParam(raw) {
   return n;
 }
 
-export function replayRouter({ db, generateText = null }) {
+export function replayRouter({ db, generateText = null, audioRoot = join(env.dataDir, 'audio') }) {
   installReplayTables(db);
   const r = Router();
 
@@ -97,6 +100,21 @@ export function replayRouter({ db, generateText = null }) {
       }
       res.json({ ok: true });
     } catch (e) { respondError(res, e); }
+  });
+
+  // The authenticated dashboard streams original audio on demand, without
+  // writing an additional WAV copy to persistent storage.
+  r.get('/meetings/:id/lines/:lineId/audio', async (req, res) => {
+    try {
+      if (!checkedMeeting(db, req, res)) return;
+      await serveReplayAudio(req, res, {
+        db, meetingId: numberParam(req.params.id),
+        lineId: numberParam(req.params.lineId), audioRoot,
+      });
+    } catch (e) {
+      if (res.headersSent) res.destroy(e);
+      else respondError(res, e);
+    }
   });
 
   r.patch('/meetings/:id/lines/:lineId', requireAdmin, (req, res) => {

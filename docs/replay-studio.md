@@ -46,3 +46,7 @@ npm --prefix packages/trpg-replay test
 ```
 
 GitHub Actionsの Node tests / STT sidecar tests / Web dashboard build も確認する。
+
+## 元音声の照合
+
+個別発言の「修正」を開くと音声プレーヤーが表示されます。発話ターンごとのPCMをサーバーがWAVとしてストリーミングし、途中からのシークにも対応します。元PCMが既定の保存期間を過ぎた場合や録音に失敗した場合は再生できません。再生にはダッシュボードへのログインが必要です。
