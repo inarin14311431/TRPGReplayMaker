@@ -52,6 +52,7 @@ function TranscriptLine({ line, person, onSave, onStartScene }) {
   const [hidden, setHidden] = useState(line.hidden);
   const [busy, setBusy] = useState(false);
   const shown = line.correctedText ?? line.originalText;
+  useEffect(() => { setCorrected(shown); setKind(line.speechKind); setHidden(line.hidden); }, [shown, line.speechKind, line.hidden]);
   const name = kind === 'character' && person?.characterName ? person.characterName : (person?.playerName || line.originalName);
   return (
     <div className="border-b border-border py-3 last:border-0">
@@ -129,7 +130,8 @@ function ReplayWorkspace({ id }) {
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const [settings, setSettings] = useState({ title: '', systemName: '', style: 'hybrid', glossary: '' });
-  const [sceneTitle, setSceneTitle] = useState('');
+  const [newSceneTitle, setNewSceneTitle] = useState('');
+  const [editSceneTitle, setEditSceneTitle] = useState('');
   const [sceneTime, setSceneTime] = useState('00:00:00');
   const [draft, setDraft] = useState('');
   const [refreshPage, setRefreshPage] = useState(0);
@@ -160,7 +162,7 @@ function ReplayWorkspace({ id }) {
     return () => { alive = false; };
   }, [id, selected, offset, refreshPage]);
   const scene = data?.scenes.find(s => s.id === selected);
-  useEffect(() => { setDraft(scene?.draft_text || ''); }, [selected, scene?.draft_text]);
+  useEffect(() => { setDraft(scene?.draft_text || ''); setEditSceneTitle(scene?.title || ''); }, [selected, scene?.draft_text, scene?.title]);
 
   const execute = async (fn, message, refresh = true) => {
     setError(''); setNote(''); setWorking(true);
@@ -175,12 +177,12 @@ function ReplayWorkspace({ id }) {
   const choose = sid => { setSelected(sid); setOffset(0); setError(''); };
   const addScene = (ms = null) => {
     const startMs = ms === null ? parseClock(sceneTime) : ms;
-    const title = sceneTitle.trim() || ('シーン ' + clock(startMs));
+    const title = newSceneTitle.trim() || ('シーン ' + clock(startMs));
     return execute(async () => {
       const r = await api.createReplayScene(id, { title, startMs });
       const d = await reload();
       if (d.scenes.some(s => s.id === r.scene.id)) choose(r.scene.id);
-      setSceneTitle('');
+      setNewSceneTitle('');
     }, 'シーンを追加しました。');
   };
   const saveSettings = () => execute(() => api.updateReplayProject(id, { ...settings, revision: data.project.revision }), '設定を保存しました。');
@@ -241,7 +243,7 @@ function ReplayWorkspace({ id }) {
           </div>
           <div className="border-t border-border pt-3 mt-3 space-y-2">
             <input className={input} aria-label="シーン開始時刻" value={sceneTime} onChange={e => setSceneTime(e.target.value)} placeholder="HH:MM:SS" />
-            <input className={input} aria-label="新しいシーン名" value={sceneTitle} onChange={e => setSceneTitle(e.target.value)} placeholder="新しいシーン名" />
+            <input className={input} aria-label="新しいシーン名" value={newSceneTitle} onChange={e => setNewSceneTitle(e.target.value)} placeholder="新しいシーン名" />
             <button className={primary} disabled={working} onClick={() => { try { addScene(); } catch (e) { setError(e.message); } }}>シーン追加</button>
           </div>
         </aside>
@@ -272,9 +274,9 @@ function ReplayWorkspace({ id }) {
             }}>シーン削除</button>}
           </div>
           <label className="text-xs text-muted">シーン名
-            <input className={input + ' mt-1'} value={sceneTitle || scene?.title || ''} onChange={e => setSceneTitle(e.target.value)} />
+            <input className={input + ' mt-1'} value={editSceneTitle} onChange={e => setEditSceneTitle(e.target.value)} />
           </label>
-          <button className={secondary + ' my-2'} disabled={working} onClick={() => execute(() => api.saveReplayScene(id, scene.id, { title: sceneTitle || scene.title }), 'シーン名を保存しました。')}>シーン名保存</button>
+          <button className={secondary + ' my-2'} disabled={working} onClick={() => execute(() => api.saveReplayScene(id, scene.id, { title: editSceneTitle }), 'シーン名を保存しました。')}>シーン名保存</button>
           <textarea className={input + ' font-mono text-sm'} aria-label="編集可能なリプレイ原稿" rows={20}
             value={draft} onChange={e => setDraft(e.target.value)} placeholder="ここに文章を直接編集できます。AI生成を使わなくても書き出せます。" />
           <div className="flex flex-wrap gap-2 mt-3">
