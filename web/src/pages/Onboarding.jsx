@@ -65,6 +65,7 @@ export default function Onboarding() {
             </>
           )}
           <p className="text-xs text-muted leading-relaxed mt-5">トークンはローカル設定に保存し、招待URLには含めません。Web画面は通常、このPCからのみアクセスできます。</p>
+          {status?.portable && <p className="text-xs text-muted leading-relaxed mt-3">Dockerなしのポータブル版で起動しています。Botの接続後は「使い方ガイド」から文字起こし方式を確認してください。OpenAI音声認識は従量課金、ローカルWhisperは別途Pythonが必要です。</p>}
         </div>
       </div>
     </div>

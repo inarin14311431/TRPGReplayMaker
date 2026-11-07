@@ -28,8 +28,8 @@ const KEY_HELP = {
 // Which env secret each STT provider needs (sidecar is keyless/local).
 const STT_KEY = { openai: 'openai' };
 const STT_HELP = {
-  sidecar: 'Runs the local faster-whisper container. Free and fully offline, but uses your CPU.',
-  openai: 'OpenAI (or any OpenAI-compatible) transcription endpoint.',
+  sidecar: 'Local faster-whisper (free API, CPU/GPU). In a portable Windows ZIP, install optional Python 3.11 via Setup-Local-Whisper.bat. In Docker, it runs as a container.',
+  openai: 'Cloud transcription with your OpenAI API key (usage-based charges). Explicitly select this option to enable API billing.',
 };
 // The provider's model catalog, fetched live (and re-fetchable with refresh,
 // which bypasses the server's cache). `seq` drops responses that land after the
