@@ -39,37 +39,38 @@ Discordのボイスチャットを録音・文字起こしし、TRPGリプレイ
 - **CLI互換**: `packages/trpg-replay/` に既存のJSON変換ツールを保持
 - **設計・ロードマップ**: `packages/trpg-replay/docs/development-plan.md`
 
-## 誰でも使いやすい開始方法
+## 導入手順：Docker不要のWindowsポータブル版（推奨）
 
-**Windows（初回のみDocker Desktopが必要）**
+**一番簡単な導入**：GitHubの [Releases](https://github.com/inarin14311431/TRPGReplayMaker/releases) にあるWindows用 `TRPGReplayMaker-Windows.zip` をダウンロードして展開し、**`Start-ReplayMaker.bat` をダブルクリック**します。
+配布ZIPにはWindows x64用のNode.js本体と依存ライブラリ、Web画面を同梱するため、Docker Desktop・WSL2・Node.jsの別途インストールは不要です。
+GitHub Actionsの [Windows Portable ZIP](https://github.com/inarin14311431/TRPGReplayMaker/actions/workflows/windows-portable.yml) からもビルド成果物を取得できます（GitHubログインが必要な場合があります）。
 
-1. [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) をインストールして起動します。
-2. このGitHubページの **Code → Download ZIP** でアプリを取得し、ZIPの中身をすべて展開します。
-3. フォルダー内の **`Start-ReplayMaker.bat` をダブルクリック**。Dockerの構築と起動が行われ、ブラウザで `http://127.0.0.1:3000` が開きます。
-4. 初回のログインは `admin` / `admin`。画面の案内に従い、必ず自分のパスワードへ変更します。
-5. 画面の日本語ガイドに沿ってDiscord BotのトークンとアプリケーションIDを取得し、保存して招待します。
-6. Discordで `/join` → セッション → `/leave`。ブラウザの **リプレイ作成** から原稿を生成します。
+1. ZIPを通常の書き込み可能なフォルダーへ**すべて展開**します。ZIP内部から直接実行しないでください。
+2. `Start-ReplayMaker.bat` を開くと、ローカルのWeb管理画面 `http://127.0.0.1:3000` が開きます。コンソールを開いたままにしてください。
+3. 初期ログイン `admin / admin` は直ちに変更します。
+4. 画面に従いDiscord Botを作成し、BotトークンとApplication IDを登録してサーバーへ招待します。
+5. **録音する前に文字起こしを設定**します。標準ZIP版にPython Whisperは同梱しません。OpenAI APIキーを入力し、Settingsで `Transcription → OpenAI` を明示的に選ぶとクラウド文字起こしが使えます（API従量課金）。
+6. API料金を避ける場合は、Python 3.11をインストールして `Setup-Local-Whisper.bat` を実行します。再起動後にSettingsでローカル文字起こしを選びます（CPUでは処理が遅くなる場合があります）。
+7. Discordで `/join` → セッション → `/leave`。ブラウザの「リプレイ作成」で原稿を編集し、単体HTMLで保存できます。
 
-終了時は `Stop-ReplayMaker.bat` を実行してください。録音データと設定はDockerの保存領域に残ります。
+**終了**：起動したコンソールで `Ctrl+C` を押します。録音・DB・設定は配布フォルダー内の `user-data` に残ります。アプリを更新するときは `user-data` のバックアップを取ってください。
+詳細は [Docker不要のWindowsポータブル導入ガイド](docs/portable-windows.md) と [初回セットアップ](docs/first-run-jp.md) を参照してください。
 
-初めての方向けの図なし手順は [初回セットアップガイド](docs/first-run-jp.md) にまとめています。
+### GitHubの「Code → Download ZIP」でソースコードを取得した場合
 
-**macOS / Linux（Docker Composeが必要）**
+ソースZIPにはNode.jsと依存ライブラリは含まれません。**Node.js 24以上（npm同梱）**をインストールしてから `Start-ReplayMaker.bat` を実行すると、初回のみ自動的に依存ライブラリを導入し、Web画面をビルドします。Gitに慣れた開発者向けの方法です。
 
-```bash
-git clone https://github.com/inarin14311431/TRPGReplayMaker.git
-cd TRPGReplayMaker
-cp .env.example .env
-docker compose up --build -d
-```
+### 従来のDocker方式（引き続き選択可能）
 
-ブラウザで `http://127.0.0.1:3000` を開きます。
+Docker Desktopがある場合は `Start-ReplayMaker-Docker.bat` / `Stop-ReplayMaker-Docker.bat` を使用できます。
+CLIでは `docker compose up --build -d` で起動できます。Docker版のDBはDockerボリューム内にあり、ポータブル版の `user-data` とは**自動同期しません**。
 
-### どこまで簡単になっているか
+### macOS / Linux
 
-Windowsでのコマンド入力は基本不要ですが、**Discord Botの作成とDocker Desktopの導入は初回だけ必要**です。
-ソフトウェアは現状ローカル起動型であり、GitHub URLを開くだけで動作するクラウドサービスではありません。
-Botを用意するのは管理者だけで、PLはDiscordを使うだけです。非公開の録音データをGitHubへアップロードしないでください。
+Node.js 24とnpmで `npm ci --omit=dev`、`npm --prefix web ci`、`npm --prefix web run build`、`node src/index.js` の順に起動できます（手動で `.env` とデータ保存先を設定）。
+または従来通り `docker compose up --build -d` を利用します。
+
+**注意**：GitHub Pagesで動くホスト型サービスではありません。Discord Botを作成する初回の操作と、文字起こし方式の設定は必要です。Discord録音の長時間実機テストは未実施です。
 
 ## CLI変換（補助ツール）
 
