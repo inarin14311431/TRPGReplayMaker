@@ -4,7 +4,7 @@ import { getGuildConfig } from '../store/config.js';
 import { getSummarizer } from '../adapters/summarizer/index.js';
 import {
   installReplayTables, getReplayOverview, saveReplayProject, saveSpeaker,
-  createScene, saveScene, deleteScene, updateReplayLine, transcriptPage,
+  createScene, saveScene, deleteScene, updateReplayLine, transcriptPage, autoSplitReplay,
 } from '../replay/store.js';
 import { buildScenePrompt, exportReplay, rowsForScene } from '../replay/render.js';
 
@@ -67,6 +67,16 @@ export function replayRouter({ db, generateText = null }) {
       if (!checkedMeeting(db, req, res)) return;
       const scene = createScene(db, Number(req.params.id), req.body || {});
       res.status(201).json({ scene });
+    } catch (e) { respondError(res, e); }
+  });
+
+  r.post('/meetings/:id/auto-split', requireAdmin, (req, res) => {
+    try {
+      if (!checkedMeeting(db, req, res)) return;
+      const result = autoSplitReplay(db, Number(req.params.id), {
+        targetChars: req.body?.targetChars === undefined ? 12000 : Number(req.body.targetChars),
+      });
+      res.json({ ok: true, ...result });
     } catch (e) { respondError(res, e); }
   });
 
