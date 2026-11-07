@@ -1,5 +1,9 @@
 # Replay Studio 利用ガイド
 
+## 起動・初期設定
+
+Windowsでは[Docker不要版の利用マニュアル](user-manual.md)に従い、配布ZIPでアプリを起動します。Docker Desktopは必須ではありません。Discord Botの登録と、文字起こし方式（OpenAI APIまたは追加導入するローカルWhisper）は録音前に設定してください。
+
 ## 全体の流れ
 
 1. Discord Botをサーバーへ追加し、参加者全員の録音同意を取る。

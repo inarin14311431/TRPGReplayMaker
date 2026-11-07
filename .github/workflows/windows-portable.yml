@@ -1,0 +1,121 @@
+name: Windows Portable ZIP
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  portable:
+    name: Docker-free Windows build and smoke test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install production dependencies (Windows)
+        run: npm ci --omit=dev
+
+      - name: Build web dashboard
+        shell: pwsh
+        run: |
+          npm --prefix web ci
+          if ($LASTEXITCODE -ne 0) { throw "Web npm install failed" }
+          npm --prefix web run build
+          if ($LASTEXITCODE -ne 0) { throw "Web build failed" }
+
+      - name: Assemble portable folder
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $stage = Join-Path $PWD 'dist\TRPGReplayMaker-Windows'
+          New-Item -Path $stage -ItemType Directory -Force | Out-Null
+          New-Item -Path "$stage\runtime" -ItemType Directory -Force | Out-Null
+          New-Item -Path "$stage\web" -ItemType Directory -Force | Out-Null
+          Copy-Item -Path (node -p "process.execPath") -Destination "$stage\runtime\node.exe"
+          Copy-Item -Path 'src' -Destination "$stage\src" -Recurse
+          Copy-Item -Path 'node_modules' -Destination "$stage\node_modules" -Recurse
+          Copy-Item -Path 'web\dist' -Destination "$stage\web\dist" -Recurse
+          Copy-Item -Path 'stt_sidecar' -Destination "$stage\stt_sidecar" -Recurse
+          Copy-Item -Path 'docs' -Destination "$stage\docs" -Recurse
+          Copy-Item -Path 'examples' -Destination "$stage\examples" -Recurse
+          Copy-Item -Path '.env.example' -Destination "$stage\.env.example"
+          foreach ($file in @('Start-ReplayMaker.bat', 'Stop-ReplayMaker.bat',
+            'Start-ReplayMaker-Docker.bat', 'Stop-ReplayMaker-Docker.bat',
+            'Setup-Local-Whisper.bat', 'LICENSE', 'UPSTREAM.md', 'README.md')) {
+              if (Test-Path $file) { Copy-Item -Path $file -Destination (Join-Path $stage $file) }
+          }
+          if (!(Test-Path "$stage\runtime\node.exe")) { throw 'Bundled Node runtime missing' }
+          if (!(Test-Path "$stage\src\index.js")) { throw 'Server entry missing' }
+          if (!(Test-Path "$stage\web\dist\index.html")) { throw 'Frontend missing' }
+          if (!(Test-Path "$stage\node_modules\express\package.json")) { throw 'Dependencies missing' }
+          if (Test-Path "$stage\.env") { throw 'Secrets must not be included in distribution' }
+          if (Test-Path "$stage\user-data") { throw 'User recordings must never be shipped' }
+          Write-Host "Portable folder assembled at $stage"
+
+      - name: Smoke test bundled Node backend and dashboard
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $stage = Join-Path $PWD 'dist\TRPGReplayMaker-Windows'
+          $env:DATA_DIR = Join-Path $stage 'user-data'
+          $env:PARLEY_ENV_FILE = Join-Path $env:DATA_DIR '.env'
+          $env:WEB_UI_HOST = '127.0.0.1'
+          $env:WEB_UI_PORT = '39971'
+          $env:TRPG_PORTABLE_MODE = '1'
+          New-Item -Path $env:DATA_DIR -ItemType Directory -Force | Out-Null
+          $proc = Start-Process -FilePath "$stage\runtime\node.exe" -ArgumentList 'src/index.js' -WorkingDirectory $stage -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $env:RUNNER_TEMP 'portable-stdout.log') -RedirectStandardError (Join-Path $env:RUNNER_TEMP 'portable-stderr.log')
+          try {
+            $ok = $false
+            for ($n = 0; $n -lt 30; $n++) {
+              Start-Sleep -Milliseconds 500
+              try {
+                $response = Invoke-WebRequest -Uri 'http://127.0.0.1:39971/api/auth/me' -UseBasicParsing -TimeoutSec 2
+                if ($response.StatusCode -eq 200) { $ok = $true; break }
+              } catch { }
+              if ($proc.HasExited) { break }
+            }
+            if (!$ok) {
+              Get-Content (Join-Path $env:RUNNER_TEMP 'portable-stdout.log') -ErrorAction SilentlyContinue
+              Get-Content (Join-Path $env:RUNNER_TEMP 'portable-stderr.log') -ErrorAction SilentlyContinue
+              throw 'The portable backend did not start its HTTP server'
+            }
+            Write-Host 'Windows portable runtime + dashboard smoke test passed'
+          } finally {
+            if (!$proc.HasExited) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
+          }
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = Join-Path $PWD 'dist\TRPGReplayMaker-Windows.zip'
+          Compress-Archive -Path 'dist\TRPGReplayMaker-Windows\*' -DestinationPath $zip -CompressionLevel Optimal -Force
+          if (!(Test-Path $zip)) { throw 'Portable archive missing' }
+          Write-Host "ZIP created: $zip"
+
+      - name: Upload Windows portable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: TRPGReplayMaker-Windows-Portable
+          path: dist/TRPGReplayMaker-Windows.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish tagged beta release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release create "${{ github.ref_name }}" "dist/TRPGReplayMaker-Windows.zip" --title "TRPGReplayMaker ${{ github.ref_name }} (Windows Portable)" --notes "Windows x64 portable beta. Download ZIP, extract, then double-click Start-ReplayMaker.bat. Docker and Node.js installation are not needed. For cloud transcription, configure an OpenAI API key and explicitly select OpenAI in Settings; optional local Whisper needs Python 3.11. Experimental: real Discord 8-hour sessions are not yet validated." --prerelease

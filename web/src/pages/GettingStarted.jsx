@@ -32,6 +32,8 @@ export default function GettingStarted() {
   const [error, setError] = useState('');
   const botReady = !!status?.bot?.connected;
   const hasServer = !!guildId;
+  const portable = status?.portable === true;
+  const localSttAvailable = !!(status?.sidecar?.managed || status?.sidecar?.running);
   const discordId = status?.connection?.discordClientId?.value || '';
   const invite = discordInviteUrl(discordId);
 
@@ -84,7 +86,12 @@ export default function GettingStarted() {
           <p>参加者全員の同意を取ってから、Discordのボイスチャンネルに入ります。</p>
           <p>チャット欄で <code className="font-mono text-ink">/join</code> と入力すると録音開始。終わったら <code className="font-mono text-ink">/leave</code> で保存・文字起こしを開始します。</p>
           <p><Link className="text-primary underline" to="/live">録音中の状態を見る</Link></p>
-          <p className="text-xs text-muted">初回の文字起こしでは音声モデルのダウンロードが必要になる場合があります。</p>
+          {portable && !localSttAvailable && <div className="rounded-md border border-border p-3 text-xs text-muted leading-relaxed">
+            <p className="font-bold text-ink">録音後の文字起こし方式を先に選択</p>
+            <p className="mt-1">Docker不要のZIP版には、PythonのローカルWhisperは標準搭載していません。<Link to="/setup" className="underline text-primary">Settings</Link> で OpenAI APIキーを設定し、文字起こしをOpenAI（有料）に切り替えるか、付属の Setup-Local-Whisper.bat で無料のローカル音声認識を追加してください。</p>
+            <p className="mt-1">どちらも選ばず録音すると、文字起こし処理に失敗します。APIの利用料金は各自のアカウントで発生します。</p>
+          </div>}
+          {!portable && <p className="text-xs text-muted">初回の文字起こしでは音声モデルのダウンロードが必要になる場合があります。</p>}
         </Stage>
         <Stage number={3} title="リプレイを作成・保存" done={false}>
           <p>録音が終わったら、リプレイ作成画面でアクト名・キャスト名を入力し、必要なシーンを自動分割します。</p>

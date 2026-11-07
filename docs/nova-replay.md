@@ -2,12 +2,11 @@
 
 ## どのようなツールか
 TRPGReplayMakerは、**個人がGitHubから複製し、自分のPCで動かす**録音・文字起こし・リプレイ編集用アプリです。
-多人数向けホスティングや課金サービスではありません。録音・編集データは原則そのPCのDocker保存領域に置かれます。
+多人数向けホスティングや課金サービスではありません。Windowsポータブル版では録音・編集データと設定は原則として配布フォルダー内の `user-data` に保存します。Docker版は別途Dockerボリュームを使用します。
 
 ## 1. インストール・起動
-WindowsはGitHubの Code → Download ZIPから取得し、展開フォルダーの `Start-ReplayMaker.bat` から起動します。
-Docker Desktopが必要です。初回ログイン `admin` / `admin` は必ず変更します。
-その後のDiscord Bot作成・招待は [初回セットアップ手順](first-run-jp.md) に従ってください。
+Windowsでは[Windows版ビルド](https://github.com/inarin14311431/TRPGReplayMaker/actions/workflows/windows-portable.yml)（GitHubログインが必要）からポータブルZIPを取得し、展開フォルダーの `Start-ReplayMaker.bat` をダブルクリックします。タグ付き配布版が公開されている場合はReleasesから取得できます。Docker Desktop・Node.jsの事前インストールは不要です。初回ログイン `admin` / `admin` は必ず変更します。
+Discord Bot作成・招待・音声認識・原稿作成までの流れは [初心者向け利用マニュアル](user-manual.md) を参照してください。
 
 ## 2. 自分のAI APIキーを設定
 1. Web管理画面 `Settings` の生成AIプロバイダー設定で、使いたいAPI（Gemini / OpenAI / OpenRouter / OpenCode）を選びます。

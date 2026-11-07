@@ -28,7 +28,9 @@ export class SidecarController {
     this.spawnImpl = deps.spawn || spawn;
     this.fetchImpl = deps.fetch || fetch;
     this.exists = deps.exists || existsSync;
-    this.pythonPath = deps.pythonPath || join(ROOT, 'stt_sidecar', '.venv', 'bin', 'python');
+    this.pythonPath = deps.pythonPath || (process.platform === 'win32'
+      ? join(ROOT, 'stt_sidecar', '.venv', 'Scripts', 'python.exe')
+      : join(ROOT, 'stt_sidecar', '.venv', 'bin', 'python'));
     this.serverPath = deps.serverPath || join(ROOT, 'stt_sidecar', 'server.py');
 
     this.child = null;       // process we spawned (null if external/none)

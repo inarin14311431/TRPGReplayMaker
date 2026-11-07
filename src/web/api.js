@@ -353,6 +353,7 @@ export function apiRouter({ db, bot = null, client = null, sidecar = null }) {
         : { state: c ? 'ready' : 'stopped', connected: !!c, hasCreds: !!env.discordToken,
             user: c?.user ? { tag: c.user.tag, id: c.user.id } : null, guildCount: c?.guilds?.cache?.size ?? 0 },
       managed: !!bot,
+      portable: process.env.TRPG_PORTABLE_MODE === '1',
       sttUrl: env.sttUrl,
       sidecar: sidecar ? sidecar.status() : null,
     });
