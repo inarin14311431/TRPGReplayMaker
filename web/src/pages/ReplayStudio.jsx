@@ -45,7 +45,7 @@ function SpeakerEditor({ person, onSave }) {
   );
 }
 
-function TranscriptLine({ line, person, onSave, onStartScene }) {
+function TranscriptLine({ line, person, meetingId, onSave, onStartScene }) {
   const [editing, setEditing] = useState(false);
   const [corrected, setCorrected] = useState(line.correctedText ?? line.originalText);
   const [kind, setKind] = useState(line.speechKind);
@@ -70,6 +70,12 @@ function TranscriptLine({ line, person, onSave, onStartScene }) {
         <div className="mt-3 space-y-2 bg-surface-2 rounded-md p-3">
           <p className="text-xs text-muted">原文（変更されません）</p>
           <p className="text-xs text-muted whitespace-pre-wrap break-words">{line.originalText}</p>
+          <div className="space-y-1">
+            <p className="text-xs text-muted">原音声（録音保存期間内のみ）</p>
+            <audio controls preload="none" className="w-full" src={api.replayAudioUrl(meetingId, line.id)}>
+              音声を再生できません。
+            </audio>
+          </div>
           <textarea aria-label="文字起こし修正" rows={3} className={input} value={corrected} onChange={e => setCorrected(e.target.value)} />
           <div className="flex flex-wrap items-center gap-2">
             <select aria-label="発言種別" className={input + ' !w-auto'} value={kind} onChange={e => setKind(e.target.value)}>
@@ -288,6 +294,7 @@ function ReplayWorkspace({ id }) {
           <p className="text-xs text-muted mb-3">修正は原文と別に保存されます。発言種別・除外も個別に編集できます。</p>
           {page.rows.map(line => <TranscriptLine key={line.id} line={line}
             person={data.speakers.find(s => s.userId === line.userId)}
+            meetingId={id}
             onSave={(uid, changes) => execute(() => api.saveReplayLine(id, uid, changes), '発言を保存しました。')}
             onStartScene={ms => { addScene(ms); }} />)}
           {page.rows.length === 0 && <p className="text-xs text-muted py-5">このシーンに発言はありません。</p>}

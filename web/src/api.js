@@ -79,6 +79,7 @@ export const api = {
   deleteReplayScene: (id, sceneId) => fetch('/api/replays/meetings/' + id + '/scenes/' + sceneId, { method: 'DELETE' }).then(json),
   saveReplayLine: (id, lineId, patch) => fetch('/api/replays/meetings/' + id + '/lines/' + lineId, jsonBody('PATCH', patch)).then(json),
   generateReplayScene: (id, sceneId, opts) => fetch('/api/replays/meetings/' + id + '/scenes/' + sceneId + '/generate', jsonBody('POST', opts)).then(json),
+  replayAudioUrl: (id, lineId) => '/api/replays/meetings/' + id + '/lines/' + lineId + '/audio',
   replayExportUrl: (id, format = 'md', mode = 'draft') => '/api/replays/meetings/' + id + '/export?format=' + encodeURIComponent(format) + '&mode=' + encodeURIComponent(mode),
 
   // ── Auth ──────────────────────────────────────────────────────────────────
