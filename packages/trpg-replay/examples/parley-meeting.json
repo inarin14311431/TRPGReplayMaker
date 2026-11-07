@@ -1,0 +1,28 @@
+{
+  "meeting": {
+    "id": 7,
+    "channel_name": "TRPG-VC",
+    "started_at": "2026-11-07T11:00:00.000Z",
+    "transcription_complete": 1
+  },
+  "attendees": [
+    "ゲームマスター",
+    "プレイヤーA"
+  ],
+  "utterances": [
+    {
+      "user_id": "111111111111111111",
+      "display_name": "ゲームマスター",
+      "start_ms": 1794049207000,
+      "end_ms": 1794049212000,
+      "text": "それではセッションを始めます。"
+    },
+    {
+      "user_id": "222222222222222222",
+      "display_name": "プレイヤーA",
+      "start_ms": 1794049214000,
+      "end_ms": 1794049217000,
+      "text": "よろしくお願いします。"
+    }
+  ]
+}

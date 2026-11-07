@@ -1,0 +1,15 @@
+{
+  "name": "parley-trpg-replay-addon",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "TRPG replay preparation from Parley Discord transcripts",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "replay": "node scripts/replay.mjs"
+  },
+  "license": "ISC"
+}
