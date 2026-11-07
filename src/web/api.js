@@ -17,6 +17,7 @@ import { COMMAND_CATALOG } from '../commands/definitions.js';
 import { retryMeeting, retryPlan, RETRYABLE_STATUSES } from '../pipeline/retry.js';
 import { availableSttProviders } from '../adapters/stt/index.js';
 import { requireAdmin } from './auth.js';
+import { replayRouter } from './replay-api.js';
 
 function audioDir(id) {
   return join(env.dataDir, 'audio', String(id));
@@ -38,6 +39,7 @@ function anyGuildUsesSidecar(db) {
 
 export function apiRouter({ db, bot = null, client = null, sidecar = null }) {
   const r = Router();
+  r.use('/replays', replayRouter({ db }));
   // The live Discord client may not exist yet (bot starts lazily once creds are
   // set). Always resolve it fresh from the controller so routes pick it up the
   // moment the bot connects, without rebuilding the router. `client` is still
