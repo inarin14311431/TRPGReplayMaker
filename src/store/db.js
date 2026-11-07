@@ -378,7 +378,7 @@ export function openDb(path) {
           has_summary: notes_json != null,
           // Failed/stuck meetings the dashboard can offer a retry for. The
           // detail endpoint refines this with a precise plan (audio on disk?).
-          failed: ['transcription_failed', 'summary_failed', 'processing'].includes(m.status) };
+          failed: ['transcription_failed', 'summary_failed', 'processing', 'partial'].includes(m.status) };
       });
     },
 

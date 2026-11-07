@@ -46,8 +46,9 @@ export async function processMeeting(db, meetingId, opts) {
     err.userMessage = `Transcription failed — the STT sidecar may be down or unreachable. (${err.message})`;
     throw err;
   }
+  const transcriptComplete = failures.length === 0 && !opts.tracks.some(t => t.incomplete);
   try {
-    db.replaceUtterances(meetingId, utterances, { complete: failures.length === 0 });
+    db.replaceUtterances(meetingId, utterances, { complete: transcriptComplete });
   } catch (err) {
     db.setMeetingStatus(meetingId, 'transcription_failed');
     err.userMessage = `Transcription could not be saved safely. (${err.message})`;
@@ -99,7 +100,7 @@ export async function processMeeting(db, meetingId, opts) {
   // timeline view. (Mirrors what db.backfillTodos + realignTodoDates already do
   // for backfilled rows.)
   db.seedTodos(meetingId, meeting.guild_id, notes.actionItems || [], meeting.started_at);
-  db.setMeetingStatus(meetingId, 'done', new Date().toISOString());
+  db.setMeetingStatus(meetingId, transcriptComplete ? 'done' : 'partial', new Date().toISOString());
 
   // Delivery is the last step and runs AFTER the summary is safely persisted, so
   // a posting failure (missing perms, deleted channel) must not throw away a
@@ -117,5 +118,5 @@ export async function processMeeting(db, meetingId, opts) {
       console.error(`[pipeline] meeting ${meetingId} summarized but delivery failed: ${deliveryError}`);
     }
   }
-  return { notes, talktime, delivered, deliveryError };
+  return { notes, talktime, delivered, deliveryError, partial: !transcriptComplete };
 }
