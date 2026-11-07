@@ -59,7 +59,7 @@ test('processMeeting keeps a meeting alive when only some tracks fail transcript
     }),
     deliver: async () => {},
   });
-  assert.equal(db.getMeeting(id).status, 'done');
+  assert.equal(db.getMeeting(id).status, 'partial');
   assert.equal(db.getMeeting(id).transcription_complete, 0);
   assert.equal(db.listUtterances(id).length, 1);
   assert.ok(notes.tldr);
