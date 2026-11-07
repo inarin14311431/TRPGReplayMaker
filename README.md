@@ -2,6 +2,17 @@
 
 Discordのボイスチャットを録音・文字起こしし、TRPGリプレイの編集用原稿を作成するプロジェクトです。
 
+## まず使う（Windows）
+
+1. [Windows版のダウンロードページ](https://github.com/inarin14311431/TRPGReplayMaker/actions/workflows/windows-portable.yml)から、緑のチェックが付いた新しい **main** の実行を開き、**Artifacts → TRPGReplayMaker-Windows-Portable** を取得します（GitHubログインが必要）。
+2. ZIPを2回展開し、**Start-ReplayMaker.bat** をダブルクリックします。
+3. ブラウザの画面に沿ってDiscord Botと文字起こしを設定します。
+4. Discordで **/join → セッション → /leave**。ブラウザでリプレイを編集し、**HTMLで保存**します。
+
+**[初めての方はこちら：クリックする場所から説明したマニュアル](docs/user-manual.md)**
+
+`admin / admin` の初期パスワードは必ず変更してください。配布ZIPではDockerやNode.jsの別途導入は不要です。
+
 ## 目的
 
 - 8〜12時間以上のセッションを想定した録音・復旧
@@ -39,40 +50,20 @@ Discordのボイスチャットを録音・文字起こしし、TRPGリプレイ
 - **CLI互換**: `packages/trpg-replay/` に既存のJSON変換ツールを保持
 - **設計・ロードマップ**: `packages/trpg-replay/docs/development-plan.md`
 
-## 導入手順：Docker不要のWindowsポータブル版（推奨）
+## 操作マニュアル
 
-**[初心者向けの操作マニュアル](docs/user-manual.md)** に、導入、Discord Botの作成、文字起こし方式の選択、録音、原稿作成、保存、終了、トラブル対応をまとめています。
+**[はじめての使い方（Windows）](docs/user-manual.md)**
 
-**一番簡単な導入**：GitHubの [Windows Portable ZIPのビルド結果](https://github.com/inarin14311431/TRPGReplayMaker/actions/workflows/windows-portable.yml)で成功した最新の `main` 実行を開き、成果物 `TRPGReplayMaker-Windows-Portable` を取得します。その中の `TRPGReplayMaker-Windows.zip` を展開して **`Start-ReplayMaker.bat` をダブルクリック**します。Actionsの成果物取得にはGitHubへのログインが必要です。正式なタグ付き配布版が公開された後は[Releases](https://github.com/inarin14311431/TRPGReplayMaker/releases)から取得できます。
-配布ZIPにはWindows x64用のNode.js本体と依存ライブラリ、Web画面を同梱するため、Docker Desktop・WSL2・Node.jsの別途インストールは不要です。
-Actionsで生成した成果物の保存期間は30日です。公開済みのReleasesがある場合はそちらを優先してください。
+ダウンロード、Bot登録、文字起こし、録音、リプレイ作成、HTML保存まで順番に説明しています。
 
-1. ZIPを通常の書き込み可能なフォルダーへ**すべて展開**します。ZIP内部から直接実行しないでください。
-2. `Start-ReplayMaker.bat` を開くと、ローカルのWeb管理画面 `http://127.0.0.1:3000` が開きます。コンソールを開いたままにしてください。
-3. 初期ログイン `admin / admin` は直ちに変更します。
-4. 画面に従いDiscord Botを作成し、BotトークンとApplication IDを登録してサーバーへ招待します。
-5. **録音する前に文字起こしを設定**します。標準ZIP版にPython Whisperは同梱しません。OpenAI APIキーを入力し、Settingsで `Transcription → OpenAI` を明示的に選ぶとクラウド文字起こしが使えます（API従量課金）。
-6. API料金を避ける場合は、Python 3.11をインストールして `Setup-Local-Whisper.bat` を実行します。再起動後にSettingsでローカル文字起こしを選びます（CPUでは処理が遅くなる場合があります）。
-7. Discordで `/join` → セッション → `/leave`。ブラウザの「リプレイ作成」で原稿を編集し、単体HTMLで保存できます。
+- [リプレイ編集の詳しい説明](docs/replay-studio.md)
+- [TRPG用語集の使い方](docs/trpg-glossary.md)
 
-**終了**：起動したコンソールで `Ctrl+C` を押します。録音・DB・設定は配布フォルダー内の `user-data` に残ります。アプリを更新するときは `user-data` のバックアップを取ってください。
-詳細は [Docker不要のWindowsポータブル導入ガイド](docs/portable-windows.md) と [初回セットアップ](docs/first-run-jp.md) を参照してください。
+### ソースコードから起動する場合
 
-### GitHubの「Code → Download ZIP」でソースコードを取得した場合
+ソースZIPから使う場合は **Node.js 24以上（npmを含む）** を用意し、`Start-ReplayMaker.bat` を実行します。初回の依存ライブラリ導入とWeb画面ビルドは自動で行われます。
 
-ソースZIPにはNode.jsと依存ライブラリは含まれません。**Node.js 24以上（npm同梱）**をインストールしてから `Start-ReplayMaker.bat` を実行すると、初回のみ自動的に依存ライブラリを導入し、Web画面をビルドします。Gitに慣れた開発者向けの方法です。
-
-### 従来のDocker方式（引き続き選択可能）
-
-Docker Desktopがある場合は `Start-ReplayMaker-Docker.bat` / `Stop-ReplayMaker-Docker.bat` を使用できます。
-CLIでは `docker compose up --build -d` で起動できます。Docker版のDBはDockerボリューム内にあり、ポータブル版の `user-data` とは**自動同期しません**。
-
-### macOS / Linux
-
-Node.js 24とnpmで `npm ci --omit=dev`、`npm --prefix web ci`、`npm --prefix web run build`、`node src/index.js` の順に起動できます（手動で `.env` とデータ保存先を設定）。
-または従来通り `docker compose up --build -d` を利用します。
-
-**注意**：GitHub Pagesで動くホスト型サービスではありません。Discord Botを作成する初回の操作と、文字起こし方式の設定は必要です。Discord録音の長時間実機テストは未実施です。
+Windowsの配布ZIPを使う場合は、[操作マニュアル](docs/user-manual.md)の順番どおりに進めてください。
 
 ## CLI変換（補助ツール）
 

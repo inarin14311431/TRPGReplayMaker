@@ -52,5 +52,5 @@ TRPGReplayMakerそのものは既存のParleyソースを基礎に拡張して�
 各自のAPIキーや録音データを公開GitHubへコミットしないでください。
 
 ## 補足
-Windows利用者向け： [初回セットアップ](first-run-jp.md)、[Replay Studio詳細操作](replay-studio.md)、[低価格運用](low-cost-mode.md)。
+Windows利用者向け： [画面をクリックして進める操作マニュアル](user-manual.md)、[Replay Studio詳細操作](replay-studio.md)、[低価格運用](low-cost-mode.md)。
 8〜12時間の実際のDiscord連続録音は未検証です。
