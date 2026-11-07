@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 import { Icon } from './ui.jsx';
+import { discordInviteUrl } from '../lib/discord-invite.js';
 
 /* Shared building blocks for editing the Discord/STT connection. Used by the
    first-run Onboarding screen and the Connection card in Settings. The Discord
@@ -28,7 +29,7 @@ function SecretField({ label, hint, present, value, onChange, placeholder }) {
             <span style={{ width: 6, height: 6, borderRadius: 6, background: 'currentColor' }} />
             Set
           </span>
-          <button type="button" onClick={() => setEditing(true)} className="btn btn-ghost !py-1.5">Replace</button>
+          <button type="button" onClick={() => setEditing(true)} className="btn btn-ghost !py-1.5">変更</button>
         </div>
       </Labeled>
     );
@@ -43,7 +44,7 @@ function SecretField({ label, hint, present, value, onChange, placeholder }) {
           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink text-xs">{reveal ? 'Hide' : 'Show'}</button>
       </div>
       {present && (
-        <button type="button" onClick={() => { onChange(''); setEditing(false); }} className="text-xs text-muted hover:text-ink mt-1.5">Keep existing key</button>
+        <button type="button" onClick={() => { onChange(''); setEditing(false); }} className="text-xs text-muted hover:text-ink mt-1.5">既存のキーを使う</button>
       )}
     </Labeled>
   );
@@ -62,6 +63,7 @@ export function ConnectionForm({ conn, onSaved, submitLabel = 'Save & connect' }
   const [err, setErr] = useState(null);
 
   const tokenPresent = !!conn?.discordToken?.set;
+  const inviteUrl = discordInviteUrl(clientId);
 
   async function submit(e) {
     e?.preventDefault();
@@ -70,13 +72,13 @@ export function ConnectionForm({ conn, onSaved, submitLabel = 'Save & connect' }
     if (token.trim()) patch.discordToken = token.trim();
     if (clientId.trim() !== (conn?.discordClientId?.value || '')) patch.discordClientId = clientId.trim();
     if (sttUrl.trim() !== (conn?.sttUrl?.value || '')) patch.sttUrl = sttUrl.trim();
-    if (Object.keys(patch).length === 0) { setErr('Nothing changed.'); setBusy(false); return; }
+    if (Object.keys(patch).length === 0) { setErr('変更がありません。'); setBusy(false); return; }
     try {
       const r = await api.setConnection(patch);
       setToken('');
       onSaved?.(r);
     } catch (e2) {
-      setErr(e2?.message || 'Failed to save.');
+      setErr(e2?.message || '保存に失敗しました。');
     } finally {
       setBusy(false);
     }
@@ -85,24 +87,39 @@ export function ConnectionForm({ conn, onSaved, submitLabel = 'Save & connect' }
   return (
     <form onSubmit={submit} className="space-y-4">
       <SecretField
-        label="Discord bot token"
+        label="Discord Botのトークン"
         present={tokenPresent}
         value={token}
         onChange={setToken}
-        placeholder="Paste your bot token…"
-        hint={<>From the <a className="text-primary hover:underline" href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">Developer Portal</a> → your app → Bot → Reset Token. Stored in <code className="text-ink-2">.env</code>, never shown again.</>}
+        placeholder="Bot Tokenを貼り付け"
+        hint={<>Discordの <a className="text-primary hover:underline" href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">Developer Portal</a> → Bot → Reset Token から取得。第三者へ共有しないでください。</>}
       />
-      <Labeled label="Application (client) ID" hint="Developer Portal → your app → General Information → Application ID.">
+      <Labeled label="アプリケーションID" hint="Developer Portal → General Information → Application ID をコピーしてください。">
         <input className="input" value={clientId} onChange={(e) => setClientId(e.target.value)}
-          placeholder="e.g. 1362914118918602893" inputMode="numeric" autoComplete="off" />
+          placeholder="例：1234567890123456789" inputMode="numeric" autoComplete="off" />
       </Labeled>
+      <div className="rounded-md bg-surface-2 border border-border px-3 py-3 space-y-1">
+        {inviteUrl ? (
+          <>
+            <p className="text-xs text-muted">このアプリIDからBotの招待リンクを自動生成しました。</p>
+            <a className="btn btn-ghost !py-2 no-underline inline-flex" href={inviteUrl} target="_blank" rel="noopener noreferrer">
+              DiscordサーバーにBotを招待
+            </a>
+          </>
+        ) : (
+          <p className="text-xs text-muted">アプリケーションIDを入力すると、Discordへの招待リンクが表示されます。</p>
+        )}
+      </div>
+      <details className="text-xs text-muted">
+        <summary className="cursor-pointer">詳細設定：文字起こしサーバーURL（通常は変更不要）</summary>
       <Labeled label="STT sidecar URL" hint="Where the local faster-whisper sidecar listens. In Docker this is set for you.">
         <input className="input" value={sttUrl} onChange={(e) => setSttUrl(e.target.value)}
           placeholder="http://127.0.0.1:8000" autoComplete="off" />
       </Labeled>
+      </details>
       {err && <p className="text-sm text-error">{err}</p>}
       <button type="submit" disabled={busy} className="btn btn-primary !py-2.5 w-full justify-center">
-        {busy ? 'Connecting…' : submitLabel}
+        {busy ? '接続中…' : submitLabel}
       </button>
     </form>
   );
