@@ -10,6 +10,7 @@ import {
   createScene, saveScene, deleteScene, updateReplayLine, transcriptPage, autoSplitReplay,
 } from '../replay/store.js';
 import { buildScenePrompt, exportReplay, rowsForScene } from '../replay/render.js';
+import { LUNA_MODEL, MAX_OUTPUT_TOKENS, quoteScene, replaySpentUsd, spendGuard, requestLuna, recordReplayUsage } from '../replay/economy.js';
 
 function respondError(res, err) {
   const status = err?.status && Number.isInteger(err.status) && err.status >= 400 && err.status < 600
@@ -33,6 +34,9 @@ function numberParam(raw) {
 export function replayRouter({ db, generateText = null, audioRoot = join(env.dataDir, 'audio') }) {
   installReplayTables(db);
   const r = Router();
+  // Serialize paid generations in this worker so two simultaneous requests do
+  // not independently approve against the same unspent budget.
+  const activePaidMeetings = new Set();
 
   r.get('/meetings/:id', (req, res) => {
     try {
@@ -126,7 +130,39 @@ export function replayRouter({ db, generateText = null, audioRoot = join(env.dat
     } catch (e) { respondError(res, e); }
   });
 
+  r.get('/meetings/:id/cost-preview', (req, res) => {
+    try {
+      const overview = checkedMeeting(db, req, res);
+      if (!overview) return;
+      const { project, scenes, meeting } = overview;
+      const spentUsd = replaySpentUsd(db, meeting.id);
+      const pending = [];
+      for (const scene of scenes.filter(s => !s.draft_text?.trim())) {
+        try {
+          const rows = rowsForScene(db, meeting.id, scene.id, { maxChars: 24000 });
+          if (!rows.some(row => !row.hidden)) continue;
+          const prompt = buildScenePrompt(overview, scene, rows);
+          pending.push({ sceneId: scene.id, title: scene.title, ...quoteScene(prompt) });
+        } catch (err) {
+          pending.push({ sceneId: scene.id, title: scene.title, error: err.message });
+        }
+      }
+      const estimateUsd = Math.round(pending.reduce((n, q) => n + (q.estimatedUsd || 0), 0) * 1e8) / 1e8;
+      const reservedUsd = Math.round(pending.reduce((n, q) => n + (q.reservedUsd || 0), 0) * 1e8) / 1e8;
+      res.json({
+        engine: project.engine, model: project.engine === 'luna' ? LUNA_MODEL : project.engine === 'local' ? project.local_model : null,
+        budgetUsd: project.budget_usd, spentUsd,
+        remainingUsd: Math.max(0, project.budget_usd - spentUsd),
+        estimatedPendingUsd: project.engine === 'luna' ? estimateUsd : 0,
+        reservedPendingUsd: project.engine === 'luna' ? reservedUsd : 0,
+        estimateOnly: true,
+        pending,
+      });
+    } catch (e) { respondError(res, e); }
+  });
+
   r.post('/meetings/:id/scenes/:sceneId/generate', requireAdmin, async (req, res) => {
+    let paidLock = null;
     try {
       const overview = checkedMeeting(db, req, res);
       if (!overview) return;
@@ -137,18 +173,53 @@ export function replayRouter({ db, generateText = null, audioRoot = join(env.dat
         return res.status(409).json({ error: 'This scene already has a draft. Confirm overwrite explicitly.' });
       const rows = rowsForScene(db, overview.meeting.id, scene.id, { maxChars: 24000 });
       const prompt = buildScenePrompt(overview, scene, rows);
-      const text = generateText
-        ? await generateText(prompt, { meetingId: overview.meeting.id, sceneId: scene.id })
-        : await getSummarizer(getGuildConfig(db, overview.meeting.guild_id)).ask(prompt);
-      if (typeof text !== 'string' || !text.trim())
+      const engine = overview.project.engine || 'inherit';
+      if (engine === 'luna') {
+        const meetingId = overview.meeting.id;
+        if (activePaidMeetings.has(meetingId)) return res.status(409).json({
+          error: 'Another paid replay generation is in progress. Avoid concurrent requests to keep spending within the configured budget.',
+        });
+        activePaidMeetings.add(meetingId);
+        paidLock = meetingId;
+        spendGuard(db, meetingId, overview.project.budget_usd, quoteScene(prompt).reservedUsd);
+      }
+      let result;
+      if (generateText) {
+        const injected = await generateText(prompt, { meetingId: overview.meeting.id, sceneId: scene.id, engine });
+        result = typeof injected === 'string' ? { text: injected } : injected;
+      } else if (engine === 'luna') {
+        result = await requestLuna(prompt, { apiKey: env.openai.apiKey, baseUrl: env.openai.baseUrl });
+      } else {
+        const guild = getGuildConfig(db, overview.meeting.guild_id);
+        const cfg = engine === 'local'
+          ? { ...guild, summarizerProvider: 'ollama', summarizerModel: overview.project.local_model,
+              summarizerFallbackProvider: null, summarizerFallbackModel: null }
+          : guild;
+        result = { text: await getSummarizer(cfg).ask(prompt) };
+      }
+      if (typeof result?.text !== 'string' || !result.text.trim())
         throw Object.assign(new Error('AI returned no editable draft.'), { status: 502 });
+      if (engine === 'luna') {
+        const cost = quoteScene(prompt);
+        // Charge ledger records on success before checking for stale edits:
+        // the API may already have billed for the request even if we reject
+        // an outdated draft afterwards.
+        const metered = Number.isSafeInteger(result.inputTokens) && Number.isSafeInteger(result.outputTokens);
+        recordReplayUsage(db, {
+          meetingId: overview.meeting.id, sceneId, engine, model: LUNA_MODEL,
+          inputTokens: metered ? result.inputTokens : Buffer.byteLength(prompt, 'utf8') + 2048,
+          outputTokens: metered ? result.outputTokens : MAX_OUTPUT_TOKENS,
+          estimated: !metered || result.estimated === true,
+        });
+      }
       const latest = getReplayOverview(db, overview.meeting.id);
       const current = latest.scenes.find(x => x.id === sceneId);
       if (!current || current.updated_at !== scene.updated_at || latest.project.revision !== overview.project.revision)
         return res.status(409).json({ error: 'The scene or project changed during AI generation. The existing draft was preserved.' });
-      const saved = saveScene(db, overview.meeting.id, sceneId, { draftText: text });
-      res.json({ scene: saved });
+      const saved = saveScene(db, overview.meeting.id, sceneId, { draftText: result.text });
+      res.json({ scene: saved, engine, spentUsd: replaySpentUsd(db, overview.meeting.id) });
     } catch (e) { respondError(res, e); }
+    finally { if (paidLock !== null) activePaidMeetings.delete(paidLock); }
   });
 
   r.get('/meetings/:id/export', (req, res) => {

@@ -23,8 +23,16 @@ CREATE TABLE IF NOT EXISTS track_transcriptions (
 CREATE TABLE IF NOT EXISTS replay_projects (
   meeting_id INTEGER PRIMARY KEY, title TEXT NOT NULL DEFAULT '',
   system_name TEXT NOT NULL DEFAULT '', style TEXT NOT NULL DEFAULT 'hybrid',
-  glossary TEXT NOT NULL DEFAULT '', revision INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL
+  glossary TEXT NOT NULL DEFAULT '', revision INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL,
+  engine TEXT NOT NULL DEFAULT 'inherit', local_model TEXT NOT NULL DEFAULT 'qwen2.5:7b', budget_usd REAL NOT NULL DEFAULT 0.5
 );
+CREATE TABLE IF NOT EXISTS replay_ai_usage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  meeting_id INTEGER NOT NULL, scene_id INTEGER NOT NULL, engine TEXT NOT NULL,
+  model TEXT NOT NULL, input_tokens INTEGER NOT NULL, output_tokens INTEGER NOT NULL,
+  usd REAL NOT NULL, estimated INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS replay_ai_usage_meeting ON replay_ai_usage(meeting_id);
 CREATE TABLE IF NOT EXISTS replay_speakers (
   meeting_id INTEGER NOT NULL, user_id TEXT NOT NULL, player_name TEXT NOT NULL DEFAULT '',
   character_name TEXT NOT NULL DEFAULT '', role TEXT NOT NULL DEFAULT 'PL',
@@ -165,7 +173,7 @@ export function openDb(path) {
       sql.exec('BEGIN');
       try {
         sql.prepare(`DELETE FROM utterances WHERE meeting_id = ?`).run(id);
-        for (const table of ['replay_line_edits','replay_scenes','replay_speakers','replay_projects']) {
+        for (const table of ['replay_line_edits','replay_scenes','replay_speakers','replay_projects','replay_ai_usage']) {
           sql.prepare('DELETE FROM ' + table + ' WHERE meeting_id=?').run(id);
         }
         sql.prepare(`DELETE FROM track_transcriptions WHERE meeting_id = ?`).run(id);
@@ -190,6 +198,7 @@ export function openDb(path) {
       try {
         sql.prepare(`UPDATE utterances SET meeting_id = ? WHERE meeting_id IN (${placeholders})`).run(targetId, ...sources);
         sql.prepare('UPDATE replay_line_edits SET meeting_id=? WHERE meeting_id IN (' + placeholders + ')').run(targetId, ...sources);
+        sql.prepare('UPDATE replay_ai_usage SET meeting_id=? WHERE meeting_id IN (' + placeholders + ')').run(targetId, ...sources);
         for (const table of ['replay_scenes','replay_speakers','replay_projects']) {
           sql.prepare('DELETE FROM ' + table + ' WHERE meeting_id IN (' + placeholders + ')').run(...sources);
         }

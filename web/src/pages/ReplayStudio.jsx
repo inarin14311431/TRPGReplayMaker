@@ -136,7 +136,8 @@ function ReplayWorkspace({ id }) {
   const [bulkProgress, setBulkProgress] = useState(null);
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
-  const [settings, setSettings] = useState({ title: '', systemName: '', style: 'hybrid', glossary: '' });
+  const [settings, setSettings] = useState({ title: '', systemName: '', style: 'hybrid', glossary: '', engine: 'inherit', localModel: 'qwen2.5:7b', budgetUsd: 0.5 });
+  const [quote, setQuote] = useState(null);
   const [newSceneTitle, setNewSceneTitle] = useState('');
   const [editSceneTitle, setEditSceneTitle] = useState('');
   const [sceneTime, setSceneTime] = useState('00:00:00');
@@ -146,7 +147,7 @@ function ReplayWorkspace({ id }) {
   const reload = useCallback(async (preserveScene = true) => {
     const d = await api.replayOverview(id);
     setData(d);
-    setSettings({ title: d.project.title, systemName: d.project.system_name, style: d.project.style, glossary: d.project.glossary });
+    setSettings({ title: d.project.title, systemName: d.project.system_name, style: d.project.style, glossary: d.project.glossary, engine: d.project.engine, localModel: d.project.local_model, budgetUsd: d.project.budget_usd });
     setSelected(prev => preserveScene && d.scenes.some(s => s.id === prev) ? prev : d.scenes[0]?.id);
     setLoading(false);
     return d;
@@ -156,7 +157,7 @@ function ReplayWorkspace({ id }) {
     setLoading(true); setSelected(null); setPage({ rows: [], total: 0 }); setError('');
     api.replayOverview(id).then(d => {
       if (!alive) return;
-      setData(d); setSettings({ title: d.project.title, systemName: d.project.system_name, style: d.project.style, glossary: d.project.glossary });
+      setData(d); setSettings({ title: d.project.title, systemName: d.project.system_name, style: d.project.style, glossary: d.project.glossary, engine: d.project.engine, localModel: d.project.local_model, budgetUsd: d.project.budget_usd });
       setSelected(d.scenes[0]?.id); setLoading(false);
     }).catch(e => { if (alive) { setError(e.message); setLoading(false); } });
     return () => { alive = false; };
@@ -192,11 +193,33 @@ function ReplayWorkspace({ id }) {
       setNewSceneTitle('');
     }, 'シーンを追加しました。');
   };
-  const saveSettings = () => execute(() => api.updateReplayProject(id, { ...settings, revision: data.project.revision }), '設定を保存しました。');
+  const saveSettings = () => execute(async () => {
+    await api.updateReplayProject(id, { ...settings, revision: data.project.revision });
+    setQuote(null);
+  }, '設定を保存しました。');
+  const previewCost = async () => {
+    setError(''); setNote('');
+    try { const x = await api.replayCostPreview(id); setQuote(x); return x; }
+    catch (e) { setError(e.message); return null; }
+  };
+
   const generateAll = async () => {
     const ungenerated = data.scenes.filter(s => !s.draft_text?.trim());
     if (!ungenerated.length) { setNote('すべてのシーンに原稿があります。'); return; }
-    if (!window.confirm(ungenerated.length + 'シーンを順番にAI生成します。API利用料が発生する場合があります。開始しますか？')) return;
+    const estimate = await previewCost();
+    if (!estimate) return;
+    if (estimate.engine === 'luna' && estimate.reservedPendingUsd > estimate.remainingUsd) {
+      setError('設定した予算の見積上限を超えます。必要なシーンだけ生成するか、ローカル生成に切り替えてください。');
+      return;
+    }
+    if (estimate.pending.some(x => x.error)) {
+      setError('文字数の上限を超えるシーンがあります。自動分割または手動分割が必要です。');
+      return;
+    }
+    const costInfo = estimate.engine === 'luna'
+      ? ('概算USD ' + estimate.estimatedPendingUsd.toFixed(4) + ' / 予約額USD ' + estimate.reservedPendingUsd.toFixed(4))
+      : estimate.engine === 'local' ? '外部文章生成API料金0円（ローカル計算）' : 'サーバー共通AI設定（料金未計算）';
+    if (!window.confirm(ungenerated.length + 'シーンを順番にAI生成します。 ' + costInfo + ' 開始しますか？')) return;
     setError(''); setNote(''); setWorking(true);
     const failures = [];
     let completed = 0;
@@ -207,7 +230,7 @@ function ReplayWorkspace({ id }) {
       completed += 1;
       setBulkProgress({ completed, total: ungenerated.length });
     }
-    try { await reload(); } catch (err) { failures.push('一覧の更新: ' + err.message); }
+    try { await reload(); setQuote(null); } catch (err) { failures.push('一覧の更新: ' + err.message); }
     setWorking(false); setBulkProgress(null);
     if (failures.length) setError('一部のシーンで生成に失敗しました。保存済みの原稿は残っています。' + '\n' + failures.join('\n'));
     else setNote('全シーンのAI原稿生成が完了しました。');
@@ -250,6 +273,29 @@ function ReplayWorkspace({ id }) {
         <label className="block text-xs text-muted mt-3">専門用語辞書（表記の参考。1行1項目）
           <textarea rows={3} className={input + ' mt-1'} value={settings.glossary} onChange={e => setSettings(s => ({ ...s, glossary: e.target.value }))} placeholder="神業、スタイル、キャスト名など" />
         </label>
+
+        <div className="mt-4 p-4 rounded-md border border-border bg-surface-2 space-y-2">
+          <h3 className="text-sm font-bold text-ink">低価格でリプレイを生成する</h3>
+          <p className="text-xs text-muted">音声認識は設定画面でローカル faster-whisper を選べます。ここでは文章生成の方式を選択します。</p>
+          <div className="grid md:grid-cols-3 gap-3">
+            <label className="text-xs text-muted">文章生成方式
+              <select className={input + ' mt-1'} value={settings.engine} onChange={e => setSettings(s => ({ ...s, engine: e.target.value }))}>
+                <option value="luna">GPT-6 Luna（低価格API）</option>
+                <option value="local">Ollama（ローカル／API料金0円）</option>
+                <option value="inherit">サーバー共通AI設定（料金未計算）</option>
+              </select>
+            </label>
+            <label className="text-xs text-muted">Luna予算（USD）
+              <input type="number" min="0" max="100" step="0.01" className={input + ' mt-1'}
+                value={settings.budgetUsd} onChange={e => setSettings(s => ({ ...s, budgetUsd: e.target.value }))} />
+            </label>
+            <label className="text-xs text-muted">Ollamaモデル
+              <input className={input + ' mt-1'} value={settings.localModel}
+                onChange={e => setSettings(s => ({ ...s, localModel: e.target.value }))} placeholder="qwen2.5:7b" />
+            </label>
+          </div>
+          <p className="text-xs text-muted">設定変更は上の「アクト設定を保存」で反映します。LunaはOpenAI APIキー、Ollamaは別途ローカル導入が必要です。予算ガードは推定値に基づくもので、請求額の厳密な上限保証ではありません。</p>
+        </div>
         <h3 className="text-sm font-bold mt-4 mb-2">参加者</h3>
         <div className="grid md:grid-cols-2 gap-2">
           {data.speakers.map(p => <SpeakerEditor key={p.userId} person={p} onSave={(uid, value) => execute(() => api.saveReplaySpeaker(id, uid, value), '参加者を保存しました。')} />)}
@@ -274,6 +320,19 @@ function ReplayWorkspace({ id }) {
               setNote(result.created.length + 'シーンの区切りを追加しました。');
             }, '自動分割しました。')}>長いログを自動分割</button>
             <p className="text-xs text-muted mt-1">文字量を基準に区切ります。内容に合わせてシーン名を編集できます。</p>
+          </div>
+          <div className="mt-3 space-y-1">
+            <button className={secondary} disabled={working} onClick={previewCost}>生成料金を見積もる</button>
+            {quote && <div className="text-xs text-muted leading-relaxed" role="status">
+              <p>生成方式: {quote.engine === 'luna' ? 'GPT-6 Luna' : quote.engine === 'local' ? 'Ollama（API料金0円）' : '共通設定（料金未計算）'}</p>
+              {quote.engine === 'luna' && <>
+                <p>使用済み料金の記録: $ {quote.spentUsd.toFixed(4)} / 予算 $ {quote.budgetUsd.toFixed(2)}</p>
+                <p>未生成シーンの料金概算: $ {quote.estimatedPendingUsd.toFixed(4)}</p>
+                <p>予算ガード用の予約額: $ {quote.reservedPendingUsd.toFixed(4)}</p>
+                <p>円換算は1 USD＝160円を参考にしてください。実際の請求額とは異なります。</p>
+              </>}
+              {quote.pending.some(x => x.error) && <p className="text-error">長すぎるシーンがあります。分割してから生成してください。</p>}
+            </div>}
           </div>
           <div className="mt-3">
             <button className={primary} disabled={working} onClick={generateAll}>未生成の全シーンをAI生成</button>

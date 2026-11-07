@@ -1,5 +1,7 @@
 // Durable TRPG replay workbench. Original speech stays in utterances;
 // all corrections, hiding, speaker roles and AI drafts are separate records.
+import { installReplayUsageTable, REPLAY_ENGINES, DEFAULT_BUDGET_USD } from './economy.js';
+
 export const REPLAY_STYLES = ['dialogue', 'hybrid', 'novel'];
 export const SPEECH_KINDS = ['unknown', 'character', 'table', 'gm', 'system'];
 const valid = (value, choices) => choices.includes(value);
@@ -27,6 +29,7 @@ export function installReplayTables(db) {
     ' speech_kind TEXT NOT NULL DEFAULT \'unknown\', hidden INTEGER NOT NULL DEFAULT 0,',
     ' updated_at TEXT NOT NULL, PRIMARY KEY(meeting_id, utterance_id));',
   ].join('\n'));
+  installReplayUsageTable(db);
 }
 
 export function assertMeeting(db, id) {
@@ -84,10 +87,16 @@ export function saveReplayProject(db, id, patch) {
   const system = patch.systemName === undefined ? old.system_name : clean(patch.systemName, 100);
   const glossary = patch.glossary === undefined ? old.glossary : clean(patch.glossary, 10000);
   const style = patch.style === undefined ? old.style : patch.style;
+  const engine = patch.engine === undefined ? old.engine : patch.engine;
+  const localModel = patch.localModel === undefined ? old.local_model : clean(patch.localModel, 100);
+  const budgetUsd = patch.budgetUsd === undefined ? old.budget_usd : Number(patch.budgetUsd);
+  if (!REPLAY_ENGINES.includes(engine)) throw Object.assign(new Error('Invalid economy engine.'), { status: 400 });
+  if (!Number.isFinite(budgetUsd) || budgetUsd < 0 || budgetUsd > 100) throw Object.assign(new Error('Budget must be $0 to $100.'), { status: 400 });
+  if (!localModel || !/^[\w.:-]{1,100}$/.test(localModel)) throw Object.assign(new Error('Invalid local Ollama model.'), { status: 400 });
   if (!title) throw Object.assign(new Error('Title is required.'), { status: 400 });
   if (!valid(style, REPLAY_STYLES)) throw Object.assign(new Error('Invalid replay style.'), { status: 400 });
-  db.sql.prepare('UPDATE replay_projects SET title=?, system_name=?, glossary=?, style=?, revision=revision+1, updated_at=? WHERE meeting_id=?')
-    .run(title, system, glossary, style, now(), id);
+  db.sql.prepare('UPDATE replay_projects SET title=?, system_name=?, glossary=?, style=?, engine=?, local_model=?, budget_usd=?, revision=revision+1, updated_at=? WHERE meeting_id=?')
+    .run(title, system, glossary, style, engine, localModel, budgetUsd, now(), id);
   return db.sql.prepare('SELECT * FROM replay_projects WHERE meeting_id = ?').get(id);
 }
 
@@ -230,7 +239,7 @@ export function autoSplitReplay(db, meetingId, { targetChars = 12000 } = {}) {
 }
 
 export function removeReplayForMeeting(db, id) {
-  for (const table of ['replay_line_edits','replay_scenes','replay_speakers','replay_projects']) {
+  for (const table of ['replay_line_edits','replay_scenes','replay_speakers','replay_projects','replay_ai_usage']) {
     db.sql.prepare('DELETE FROM ' + table + ' WHERE meeting_id=?').run(id);
   }
 }
