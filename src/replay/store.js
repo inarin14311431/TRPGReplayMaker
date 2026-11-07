@@ -3,6 +3,7 @@
 import { installReplayUsageTable, REPLAY_ENGINES, DEFAULT_BUDGET_USD } from './economy.js';
 
 export const REPLAY_STYLES = ['dialogue', 'hybrid', 'novel'];
+export const AI_PROVIDERS = ['gemini', 'openai', 'openrouter', 'opencode', 'ollama'];
 export const SPEECH_KINDS = ['unknown', 'character', 'table', 'gm', 'system'];
 const valid = (value, choices) => choices.includes(value);
 const clean = (value, max) => typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -41,7 +42,7 @@ export function assertMeeting(db, id) {
 export function ensureReplay(db, id) {
   const m = assertMeeting(db, id);
   if (!m) return null;
-  db.sql.prepare('INSERT OR IGNORE INTO replay_projects (meeting_id, title, system_name, style, glossary, updated_at) VALUES (?, ?, \'\', \'hybrid\', \'\', ?)').run(m.id, m.channel_name || 'TRPG Session', now());
+  db.sql.prepare('INSERT OR IGNORE INTO replay_projects (meeting_id, title, system_name, style, glossary, updated_at) VALUES (?, ?, \'トーキョーN◎VA\', \'hybrid\', \'\', ?)').run(m.id, m.channel_name || 'TRPG Session', now());
   db.sql.prepare('INSERT OR IGNORE INTO replay_scenes (meeting_id, start_ms, title, updated_at) VALUES (?, 0, ?, ?)').run(m.id, 'オープニング', now());
   return m;
 }
@@ -90,13 +91,17 @@ export function saveReplayProject(db, id, patch) {
   const engine = patch.engine === undefined ? old.engine : patch.engine;
   const localModel = patch.localModel === undefined ? old.local_model : clean(patch.localModel, 100);
   const budgetUsd = patch.budgetUsd === undefined ? old.budget_usd : Number(patch.budgetUsd);
+  const aiProvider = patch.aiProvider === undefined ? old.ai_provider : patch.aiProvider;
+  const aiModel = patch.aiModel === undefined ? old.ai_model : clean(patch.aiModel, 150);
+  if (!AI_PROVIDERS.includes(aiProvider)) throw Object.assign(new Error('Invalid AI provider.'), { status: 400 });
+  if (!/^[a-zA-Z0-9_./:+-]{1,150}$/.test(aiModel)) throw Object.assign(new Error('Invalid AI model ID.'), { status: 400 });
   if (!REPLAY_ENGINES.includes(engine)) throw Object.assign(new Error('Invalid economy engine.'), { status: 400 });
   if (!Number.isFinite(budgetUsd) || budgetUsd < 0 || budgetUsd > 100) throw Object.assign(new Error('Budget must be $0 to $100.'), { status: 400 });
   if (!localModel || !/^[\w.:-]{1,100}$/.test(localModel)) throw Object.assign(new Error('Invalid local Ollama model.'), { status: 400 });
   if (!title) throw Object.assign(new Error('Title is required.'), { status: 400 });
   if (!valid(style, REPLAY_STYLES)) throw Object.assign(new Error('Invalid replay style.'), { status: 400 });
-  db.sql.prepare('UPDATE replay_projects SET title=?, system_name=?, glossary=?, style=?, engine=?, local_model=?, budget_usd=?, revision=revision+1, updated_at=? WHERE meeting_id=?')
-    .run(title, system, glossary, style, engine, localModel, budgetUsd, now(), id);
+  db.sql.prepare('UPDATE replay_projects SET title=?, system_name=?, glossary=?, style=?, engine=?, local_model=?, budget_usd=?, ai_provider=?, ai_model=?, revision=revision+1, updated_at=? WHERE meeting_id=?')
+    .run(title, system, glossary, style, engine, localModel, budgetUsd, aiProvider, aiModel, now(), id);
   return db.sql.prepare('SELECT * FROM replay_projects WHERE meeting_id = ?').get(id);
 }
 

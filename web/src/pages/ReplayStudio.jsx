@@ -136,7 +136,7 @@ function ReplayWorkspace({ id }) {
   const [bulkProgress, setBulkProgress] = useState(null);
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
-  const [settings, setSettings] = useState({ title: '', systemName: '', style: 'hybrid', glossary: '', engine: 'inherit', localModel: 'qwen2.5:7b', budgetUsd: 0.5 });
+  const [settings, setSettings] = useState({ title: '', systemName: '', style: 'hybrid', glossary: '', engine: 'inherit', localModel: 'qwen2.5:7b', budgetUsd: 0.5, aiProvider: 'gemini', aiModel: 'gemini-2.5-flash' });
   const [quote, setQuote] = useState(null);
   const [newSceneTitle, setNewSceneTitle] = useState('');
   const [editSceneTitle, setEditSceneTitle] = useState('');
@@ -147,7 +147,7 @@ function ReplayWorkspace({ id }) {
   const reload = useCallback(async (preserveScene = true) => {
     const d = await api.replayOverview(id);
     setData(d);
-    setSettings({ title: d.project.title, systemName: d.project.system_name, style: d.project.style, glossary: d.project.glossary, engine: d.project.engine, localModel: d.project.local_model, budgetUsd: d.project.budget_usd });
+    setSettings({ title: d.project.title, systemName: d.project.system_name, style: d.project.style, glossary: d.project.glossary, engine: d.project.engine, localModel: d.project.local_model, budgetUsd: d.project.budget_usd, aiProvider: d.project.ai_provider, aiModel: d.project.ai_model });
     setSelected(prev => preserveScene && d.scenes.some(s => s.id === prev) ? prev : d.scenes[0]?.id);
     setLoading(false);
     return d;
@@ -157,7 +157,7 @@ function ReplayWorkspace({ id }) {
     setLoading(true); setSelected(null); setPage({ rows: [], total: 0 }); setError('');
     api.replayOverview(id).then(d => {
       if (!alive) return;
-      setData(d); setSettings({ title: d.project.title, systemName: d.project.system_name, style: d.project.style, glossary: d.project.glossary, engine: d.project.engine, localModel: d.project.local_model, budgetUsd: d.project.budget_usd });
+      setData(d); setSettings({ title: d.project.title, systemName: d.project.system_name, style: d.project.style, glossary: d.project.glossary, engine: d.project.engine, localModel: d.project.local_model, budgetUsd: d.project.budget_usd, aiProvider: d.project.ai_provider, aiModel: d.project.ai_model });
       setSelected(d.scenes[0]?.id); setLoading(false);
     }).catch(e => { if (alive) { setError(e.message); setLoading(false); } });
     return () => { alive = false; };
@@ -218,7 +218,7 @@ function ReplayWorkspace({ id }) {
     }
     const costInfo = estimate.engine === 'luna'
       ? ('概算USD ' + estimate.estimatedPendingUsd.toFixed(4) + ' / 予約額USD ' + estimate.reservedPendingUsd.toFixed(4))
-      : estimate.engine === 'local' ? '外部文章生成API料金0円（ローカル計算）' : 'サーバー共通AI設定（料金未計算）';
+      : estimate.engine === 'local' ? '外部文章生成API料金0円（ローカル計算）' : estimate.engine === 'custom' ? '指定したAIの料金は提供元によります（料金未計算）' : 'サーバー共通AI設定（料金未計算）';
     if (!window.confirm(ungenerated.length + 'シーンを順番にAI生成します。 ' + costInfo + ' 開始しますか？')) return;
     setError(''); setNote(''); setWorking(true);
     const failures = [];
@@ -244,7 +244,8 @@ function ReplayWorkspace({ id }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageHead title="Replay Studio" subtitle={'録音 #' + id + ' · ' + data.count.toLocaleString() + ' 発言'} />
         <div className="flex flex-wrap gap-2">
-          <a href={api.replayExportUrl(id, 'md', 'draft')} className={primary + ' no-underline'}>原稿を保存 (.md)</a>
+          <a href={api.replayExportUrl(id, 'html', 'draft')} className={primary + ' no-underline'}>完成版HTML (.html)</a>
+          <a href={api.replayExportUrl(id, 'md', 'draft')} className={secondary + ' no-underline'}>原稿を保存 (.md)</a>
           <a href={api.replayExportUrl(id, 'md', 'script')} className={secondary + ' no-underline'}>会話ログ (.md)</a>
           <a href={api.replayExportUrl(id, 'json', 'draft')} className={secondary + ' no-underline'}>編集データ (.json)</a>
           <Link to={'/meetings/' + id} className={secondary + ' no-underline'}>元の議事録</Link>
@@ -282,6 +283,7 @@ function ReplayWorkspace({ id }) {
               <select className={input + ' mt-1'} value={settings.engine} onChange={e => setSettings(s => ({ ...s, engine: e.target.value }))}>
                 <option value="luna">GPT-6 Luna（低価格API）</option>
                 <option value="local">Ollama（ローカル／API料金0円）</option>
+                <option value="custom">自分のAI API・モデルを指定</option>
                 <option value="inherit">サーバー共通AI設定（料金未計算）</option>
               </select>
             </label>
@@ -294,6 +296,22 @@ function ReplayWorkspace({ id }) {
                 onChange={e => setSettings(s => ({ ...s, localModel: e.target.value }))} placeholder="qwen2.5:7b" />
             </label>
           </div>
+          {settings.engine === 'custom' && <div className="grid md:grid-cols-2 gap-3">
+            <label className="text-xs text-muted">使用するAIサービス
+              <select value={settings.aiProvider} className={input + ' mt-1'} onChange={e => setSettings(s => ({ ...s, aiProvider: e.target.value }))}>
+                <option value="gemini">Google Gemini</option>
+                <option value="openai">OpenAI API</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="opencode">OpenCode</option>
+                <option value="ollama">Ollama（ローカル）</option>
+              </select>
+            </label>
+            <label className="text-xs text-muted">モデルID
+              <input className={input + ' mt-1'} value={settings.aiModel}
+                onChange={e => setSettings(s => ({ ...s, aiModel: e.target.value }))} placeholder="gemini-2.5-flash" />
+            </label>
+            <p className="md:col-span-2 text-xs text-muted">APIキーはこの画面に入力せず <Link to="/setup" className="underline text-primary">設定画面</Link> で登録します。各自のキーをPC内に保存し、選択モデルの料金は提供元の請求条件に従います。カスタム設定は費用見積り・予算ガードの対象外です。</p>
+          </div>}
           <p className="text-xs text-muted">設定変更は上の「アクト設定を保存」で反映します。LunaはOpenAI APIキー、Ollamaは別途ローカル導入が必要です。予算ガードは推定値に基づくもので、請求額の厳密な上限保証ではありません。</p>
         </div>
         <h3 className="text-sm font-bold mt-4 mb-2">参加者</h3>
@@ -324,7 +342,7 @@ function ReplayWorkspace({ id }) {
           <div className="mt-3 space-y-1">
             <button className={secondary} disabled={working} onClick={previewCost}>生成料金を見積もる</button>
             {quote && <div className="text-xs text-muted leading-relaxed" role="status">
-              <p>生成方式: {quote.engine === 'luna' ? 'GPT-6 Luna' : quote.engine === 'local' ? 'Ollama（API料金0円）' : '共通設定（料金未計算）'}</p>
+              <p>生成方式: {quote.engine === 'luna' ? 'GPT-6 Luna' : quote.engine === 'local' ? 'Ollama（API料金0円）' : quote.engine === 'custom' ? '自分のAI：' + quote.model + '（料金未計算）' : '共通設定（料金未計算）'}</p>
               {quote.engine === 'luna' && <>
                 <p>使用済み料金の記録: $ {quote.spentUsd.toFixed(4)} / 予算 $ {quote.budgetUsd.toFixed(2)}</p>
                 <p>未生成シーンの料金概算: $ {quote.estimatedPendingUsd.toFixed(4)}</p>

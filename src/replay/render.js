@@ -61,9 +61,17 @@ export function buildScenePrompt(overview, scene, rows) {
       ' 種別:' + x.speechKind + '] ' + (x.correctedText ?? x.originalText);
   });
   if (!lines.length) throw Object.assign(new Error('No visible transcript lines in this scene.'), { status: 400 });
+  const novaGuide = /[NＮ][◎oＯ][VＶ][AＡ]/iu.test(overview.project.system_name)
+    ? [
+      'このアクトはトーキョーN◎VA。GMに相当する役割はRL（ルーラー）、PCはキャスト、プレイヤーはPLと呼ぶ。',
+      'ルール用語（スタイル、神業、スート、判定など）は原ログ・用語辞書を優先し、誤って別システムの用語に置換しない。',
+      '神業の使用・判定結果・NPCの台詞はログに記録がある場合だけ記述する。実際に発生していない演出を付け加えない。',
+      'キャストとPLのメタ会話を区別し、RLの描写とキャストの発言を読み分けられる原稿にする。',
+    ] : [];
   return [
     'あなたはTRPGリプレイの編集者です。以下の発言ログを日本語Markdownのリプレイ原稿に整理してください。',
     'スタイル: ' + guide,
+    ...novaGuide,
     'アクト: ' + overview.project.title,
     'システム: ' + (overview.project.system_name || '未指定'),
     'シーン: ' + scene.title,
