@@ -64,6 +64,22 @@ export const api = {
   botAction: (action) => fetch(`/api/system/bot/${action}`, { method: 'POST' }).then(json),
   sidecarAction: (action) => fetch(`/api/system/sidecar/${action}`, { method: 'POST' }).then(json),
 
+  // TRPG replay studio — original transcript remains unmodified.
+  replayOverview: id => fetch('/api/replays/meetings/' + id).then(json),
+  replayLines: (id, { sceneId, offset = 0, limit = 80 } = {}) => {
+    const p = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+    if (sceneId != null) p.set('scene', String(sceneId));
+    return fetch('/api/replays/meetings/' + id + '/lines?' + p).then(json);
+  },
+  updateReplayProject: (id, patch) => fetch('/api/replays/meetings/' + id, jsonBody('PATCH', patch)).then(json),
+  saveReplaySpeaker: (id, userId, patch) => fetch('/api/replays/meetings/' + id + '/speakers/' + encodeURIComponent(userId), jsonBody('PUT', patch)).then(json),
+  createReplayScene: (id, data) => fetch('/api/replays/meetings/' + id + '/scenes', jsonBody('POST', data)).then(json),
+  saveReplayScene: (id, sceneId, patch) => fetch('/api/replays/meetings/' + id + '/scenes/' + sceneId, jsonBody('PATCH', patch)).then(json),
+  deleteReplayScene: (id, sceneId) => fetch('/api/replays/meetings/' + id + '/scenes/' + sceneId, { method: 'DELETE' }).then(json),
+  saveReplayLine: (id, lineId, patch) => fetch('/api/replays/meetings/' + id + '/lines/' + lineId, jsonBody('PATCH', patch)).then(json),
+  generateReplayScene: (id, sceneId, opts) => fetch('/api/replays/meetings/' + id + '/scenes/' + sceneId + '/generate', jsonBody('POST', opts)).then(json),
+  replayExportUrl: (id, format = 'md', mode = 'draft') => '/api/replays/meetings/' + id + '/export?format=' + encodeURIComponent(format) + '&mode=' + encodeURIComponent(mode),
+
   // ── Auth ──────────────────────────────────────────────────────────────────
   me: () => fetch('/api/auth/me').then(json),
   login: (username, password) => fetch('/api/auth/login', jsonBody('POST', { username, password })).then(json),
