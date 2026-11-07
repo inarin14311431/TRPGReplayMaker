@@ -47,7 +47,7 @@ export function wavHeader(dataLength) {
 // turn can be 100+ MB; the old readFile + Buffer.concat held ~2x that in RAM.
 export async function convertPcmToWav(pcmPath, wavPath) {
   const { size } = await stat(pcmPath);
-  if (!size || size % 2 !== 0 || size > 0xFFFFFFFF - 36) {
+  if (size % 2 !== 0 || size > 0xFFFFFFFF - 36) {
     throw new RangeError(`Invalid or oversized PCM for WAV conversion: ${pcmPath} (${size} bytes)`);
   }
   const out = createWriteStream(wavPath);
