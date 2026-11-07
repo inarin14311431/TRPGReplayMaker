@@ -7,6 +7,7 @@ import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
 import ForcePasswordChange from './pages/ForcePasswordChange.jsx';
 import Onboarding from './pages/Onboarding.jsx';
+import GettingStarted from './pages/GettingStarted.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Live from './pages/Live.jsx';
 import Meetings from './pages/Meetings.jsx';
@@ -47,6 +48,7 @@ function Shell() {
               <Route path="/meetings" element={<Meetings />} />
               <Route path="/meetings/:id" element={<Reading />} />
               <Route path="/replays" element={<ReplayStudio />} />
+              <Route path="/guide" element={<GettingStarted />} />
               <Route path="/replays/:id" element={<ReplayStudio />} />
               <Route path="/action-items" element={<ActionItems />} />
               <Route path="/analytics" element={<Analytics />} />

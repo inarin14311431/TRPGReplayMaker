@@ -23,7 +23,7 @@ test('invalid client ID cannot create a clickable invite link', () => {
   assert.equal(isDiscordApplicationId('not-a-number'), false);
   assert.equal(discordInviteUrl('0".evil.com'), null);
   assert.equal(discordInviteUrl('123'), null);
-  assert.equal(discordInviteUrl('1234567890123456789'), 'https://discord.com/oauth2/authorize?client_id=1234567890123456789&permissions=34396358784&scope=bot+applications.commands&integration_type=0');
+  assert.equal(discordInviteUrl('1234567890123456789'), 'https://discord.com/oauth2/authorize?client_id=1234567890123456789&permissions=34396523520&scope=bot+applications.commands&integration_type=0');
 });
 
 test('Windows launcher does not modify saved configuration or delete recordings', () => {
