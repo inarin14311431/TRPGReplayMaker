@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import Live from './pages/Live.jsx';
 import Meetings from './pages/Meetings.jsx';
 import Reading from './pages/Reading.jsx';
+import ReplayStudio from './pages/ReplayStudio.jsx';
 import ActionItems from './pages/ActionItems.jsx';
 import Analytics from './pages/Analytics.jsx';
 import Search from './pages/Search.jsx';
@@ -45,6 +46,8 @@ function Shell() {
               <Route path="/live" element={<Live />} />
               <Route path="/meetings" element={<Meetings />} />
               <Route path="/meetings/:id" element={<Reading />} />
+              <Route path="/replays" element={<ReplayStudio />} />
+              <Route path="/replays/:id" element={<ReplayStudio />} />
               <Route path="/action-items" element={<ActionItems />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/search" element={<Search />} />

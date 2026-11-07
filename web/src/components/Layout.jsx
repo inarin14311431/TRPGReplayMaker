@@ -12,6 +12,7 @@ const NAV = [
   { to: '/', label: 'Dashboard', icon: Icon.Home, end: true },
   { to: '/live', label: 'Live', icon: Icon.Radio, live: true },
   { to: '/meetings', label: 'Meetings', icon: Icon.Meetings },
+  { to: '/replays', label: 'Replay studio', icon: Icon.Doc },
   { to: '/action-items', label: 'Action items', icon: Icon.CheckSquare },
   { to: '/analytics', label: 'Analytics', icon: Icon.Chart },
   { to: '/search', label: 'Search', icon: Icon.Search },
@@ -130,7 +131,7 @@ export default function Layout() {
       >
         <Link to="/" onClick={() => setNavOpen(false)} className="flex items-center gap-2.5 px-5 h-[60px] shrink-0 no-underline">
           <Logo size={30} className="shrink-0" />
-          <span className="font-display text-[19px] font-extrabold text-ink tracking-tight">Parley</span>
+          <span className="font-display text-[19px] font-extrabold text-ink tracking-tight">TRPGReplayMaker</span>
         </Link>
 
         <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto" onClick={() => setNavOpen(false)}>

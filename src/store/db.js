@@ -20,6 +20,27 @@ CREATE TABLE IF NOT EXISTS track_transcriptions (
   text TEXT NOT NULL,
   PRIMARY KEY (meeting_id, pcm_name)
 );
+CREATE TABLE IF NOT EXISTS replay_projects (
+  meeting_id INTEGER PRIMARY KEY, title TEXT NOT NULL DEFAULT '',
+  system_name TEXT NOT NULL DEFAULT '', style TEXT NOT NULL DEFAULT 'hybrid',
+  glossary TEXT NOT NULL DEFAULT '', revision INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS replay_speakers (
+  meeting_id INTEGER NOT NULL, user_id TEXT NOT NULL, player_name TEXT NOT NULL DEFAULT '',
+  character_name TEXT NOT NULL DEFAULT '', role TEXT NOT NULL DEFAULT 'PL',
+  PRIMARY KEY(meeting_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS replay_scenes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, meeting_id INTEGER NOT NULL,
+  start_ms INTEGER NOT NULL, title TEXT NOT NULL, draft_text TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL, UNIQUE(meeting_id,start_ms)
+);
+CREATE INDEX IF NOT EXISTS replay_scenes_order ON replay_scenes(meeting_id,start_ms);
+CREATE TABLE IF NOT EXISTS replay_line_edits (
+  meeting_id INTEGER NOT NULL, utterance_id INTEGER NOT NULL, corrected_text TEXT,
+  speech_kind TEXT NOT NULL DEFAULT 'unknown', hidden INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL, PRIMARY KEY(meeting_id,utterance_id)
+);
 CREATE TABLE IF NOT EXISTS attendees (
   meeting_id INTEGER, user_id TEXT, display_name TEXT,
   UNIQUE(meeting_id, user_id)
@@ -144,6 +165,9 @@ export function openDb(path) {
       sql.exec('BEGIN');
       try {
         sql.prepare(`DELETE FROM utterances WHERE meeting_id = ?`).run(id);
+        for (const table of ['replay_line_edits','replay_scenes','replay_speakers','replay_projects']) {
+          sql.prepare('DELETE FROM ' + table + ' WHERE meeting_id=?').run(id);
+        }
         sql.prepare(`DELETE FROM track_transcriptions WHERE meeting_id = ?`).run(id);
         sql.prepare(`DELETE FROM attendees WHERE meeting_id = ?`).run(id);
         sql.prepare(`DELETE FROM summaries WHERE meeting_id = ?`).run(id);
@@ -165,6 +189,10 @@ export function openDb(path) {
       sql.exec('BEGIN');
       try {
         sql.prepare(`UPDATE utterances SET meeting_id = ? WHERE meeting_id IN (${placeholders})`).run(targetId, ...sources);
+        sql.prepare('UPDATE replay_line_edits SET meeting_id=? WHERE meeting_id IN (' + placeholders + ')').run(targetId, ...sources);
+        for (const table of ['replay_scenes','replay_speakers','replay_projects']) {
+          sql.prepare('DELETE FROM ' + table + ' WHERE meeting_id IN (' + placeholders + ')').run(...sources);
+        }
         // Carry over attendees not already on the target.
         sql.prepare(
           `INSERT OR IGNORE INTO attendees (meeting_id, user_id, display_name)

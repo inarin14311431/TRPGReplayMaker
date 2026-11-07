@@ -325,6 +325,8 @@ function Note({ data, todos, guildId, meetings, refetchTodos, onReload }) {
         )}
       </header>
 
+      <Link to={'/replays/' + meeting.id} className="btn btn-primary no-underline mt-4 !py-2 !px-3 text-xs"><Icon.Doc width={15} height={15} /> リプレイを編集</Link>
+
       {isFailed && <RetryBanner meeting={meeting} retry={retry} onDone={onReload} />}
 
       {!notes && !isFailed && <p className="text-sm text-muted mt-8">No summary available — status: {meeting.status}.</p>}
