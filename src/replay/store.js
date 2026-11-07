@@ -5,6 +5,7 @@ export const SPEECH_KINDS = ['unknown', 'character', 'table', 'gm', 'system'];
 const valid = (value, choices) => choices.includes(value);
 const clean = (value, max) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 const now = () => new Date().toISOString();
+const touch = (db, id) => db.sql.prepare('UPDATE replay_projects SET revision=revision+1,updated_at=? WHERE meeting_id=?').run(now(), id);
 
 export function installReplayTables(db) {
   db.sql.exec([
@@ -101,6 +102,7 @@ export function saveSpeaker(db, meetingId, userId, input) {
   const character = clean(input.characterName, 100);
   db.sql.prepare('INSERT INTO replay_speakers (meeting_id,user_id,player_name,character_name,role) VALUES (?,?,?,?,?) ON CONFLICT(meeting_id,user_id) DO UPDATE SET player_name=excluded.player_name, character_name=excluded.character_name, role=excluded.role')
     .run(meetingId, userId, player, character, role);
+  touch(db, meetingId);
   return { userId, originalName: who.originalName, playerName: player || who.originalName, characterName: character, role };
 }
 
@@ -113,6 +115,7 @@ export function createScene(db, meetingId, input) {
   const exists = db.sql.prepare('SELECT id FROM replay_scenes WHERE meeting_id=? AND start_ms=?').get(meetingId, startMs);
   if (exists) throw Object.assign(new Error('A scene already starts at that time.'), { status: 409 });
   const id = db.sql.prepare('INSERT INTO replay_scenes (meeting_id,start_ms,title,updated_at) VALUES (?,?,?,?)').run(meetingId, startMs, title, now()).lastInsertRowid;
+  touch(db, meetingId);
   return db.sql.prepare('SELECT * FROM replay_scenes WHERE id = ?').get(id);
 }
 
@@ -124,6 +127,7 @@ export function saveScene(db, meetingId, sceneId, patch) {
   if (!title) throw Object.assign(new Error('Scene title is required.'), { status: 400 });
   db.sql.prepare('UPDATE replay_scenes SET title=?, draft_text=?, updated_at=? WHERE id=? AND meeting_id=?')
     .run(title, draft, now(), sceneId, meetingId);
+  if (title !== scene.title) touch(db, meetingId);
   return db.sql.prepare('SELECT * FROM replay_scenes WHERE id=?').get(sceneId);
 }
 
@@ -132,6 +136,7 @@ export function deleteScene(db, meetingId, sceneId) {
   if (!scene) return false;
   if (scene.start_ms === 0) throw Object.assign(new Error('Opening scene cannot be deleted.'), { status: 400 });
   db.sql.prepare('DELETE FROM replay_scenes WHERE id=? AND meeting_id=?').run(sceneId, meetingId);
+  touch(db, meetingId);
   return true;
 }
 
@@ -149,6 +154,7 @@ export function updateReplayLine(db, meetingId, utteranceId, patch) {
   const hidden = patch.hidden === undefined ? (old?.hidden || 0) : (patch.hidden === true ? 1 : 0);
   db.sql.prepare('INSERT INTO replay_line_edits (meeting_id,utterance_id,corrected_text,speech_kind,hidden,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(meeting_id,utterance_id) DO UPDATE SET corrected_text=excluded.corrected_text,speech_kind=excluded.speech_kind,hidden=excluded.hidden,updated_at=excluded.updated_at')
     .run(meetingId, id, corrected, kind, hidden, now());
+  touch(db, meetingId);
   return { id, originalText: line.text, correctedText: corrected, speechKind: kind, hidden: !!hidden };
 }
 
