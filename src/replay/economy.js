@@ -1,6 +1,6 @@
 // Small, explicit pricing table for a fixed, opt-in economy model.
 // Estimates are indicative. Official billing, taxes, model pricing and FX can change.
-export const REPLAY_ENGINES = ['inherit', 'luna', 'local'];
+export const REPLAY_ENGINES = ['inherit', 'luna', 'local', 'custom'];
 export const LUNA_MODEL = 'gpt-6-luna';
 export const LUNA_PRICES = Object.freeze({ inputUsdPerMillion: 0.10, outputUsdPerMillion: 0.50 });
 export const MAX_OUTPUT_TOKENS = 4000;
@@ -44,6 +44,8 @@ export function installReplayUsageTable(db) {
   if (!cols.includes('engine')) db.sql.exec("ALTER TABLE replay_projects ADD COLUMN engine TEXT NOT NULL DEFAULT 'inherit'");
   if (!cols.includes('local_model')) db.sql.exec("ALTER TABLE replay_projects ADD COLUMN local_model TEXT NOT NULL DEFAULT 'qwen2.5:7b'");
   if (!cols.includes('budget_usd')) db.sql.exec('ALTER TABLE replay_projects ADD COLUMN budget_usd REAL NOT NULL DEFAULT 0.5');
+  if (!cols.includes('ai_provider')) db.sql.exec("ALTER TABLE replay_projects ADD COLUMN ai_provider TEXT NOT NULL DEFAULT 'gemini'");
+  if (!cols.includes('ai_model')) db.sql.exec("ALTER TABLE replay_projects ADD COLUMN ai_model TEXT NOT NULL DEFAULT 'gemini-2.5-flash'");
   db.sql.exec('CREATE TABLE IF NOT EXISTS replay_ai_usage (' +
     'id INTEGER PRIMARY KEY AUTOINCREMENT, meeting_id INTEGER NOT NULL, scene_id INTEGER NOT NULL,' +
     'engine TEXT NOT NULL, model TEXT NOT NULL, input_tokens INTEGER NOT NULL,' +

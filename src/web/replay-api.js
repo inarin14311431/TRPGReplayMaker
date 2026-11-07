@@ -10,6 +10,7 @@ import {
   createScene, saveScene, deleteScene, updateReplayLine, transcriptPage, autoSplitReplay,
 } from '../replay/store.js';
 import { buildScenePrompt, exportReplay, rowsForScene } from '../replay/render.js';
+import { exportReplayHtml } from '../replay/html.js';
 import { LUNA_MODEL, MAX_OUTPUT_TOKENS, quoteScene, replaySpentUsd, spendGuard, requestLuna, recordReplayUsage } from '../replay/economy.js';
 
 function respondError(res, err) {
@@ -150,7 +151,7 @@ export function replayRouter({ db, generateText = null, audioRoot = join(env.dat
       const estimateUsd = Math.round(pending.reduce((n, q) => n + (q.estimatedUsd || 0), 0) * 1e8) / 1e8;
       const reservedUsd = Math.round(pending.reduce((n, q) => n + (q.reservedUsd || 0), 0) * 1e8) / 1e8;
       res.json({
-        engine: project.engine, model: project.engine === 'luna' ? LUNA_MODEL : project.engine === 'local' ? project.local_model : null,
+        engine: project.engine, model: project.engine === 'luna' ? LUNA_MODEL : project.engine === 'local' ? project.local_model : project.engine === 'custom' ? project.ai_model : null,
         budgetUsd: project.budget_usd, spentUsd,
         remainingUsd: Math.max(0, project.budget_usd - spentUsd),
         estimatedPendingUsd: project.engine === 'luna' ? estimateUsd : 0,
@@ -194,7 +195,10 @@ export function replayRouter({ db, generateText = null, audioRoot = join(env.dat
         const cfg = engine === 'local'
           ? { ...guild, summarizerProvider: 'ollama', summarizerModel: overview.project.local_model,
               summarizerFallbackProvider: null, summarizerFallbackModel: null }
-          : guild;
+          : engine === 'custom'
+            ? { ...guild, summarizerProvider: overview.project.ai_provider, summarizerModel: overview.project.ai_model,
+                summarizerFallbackProvider: null, summarizerFallbackModel: null }
+            : guild;
         result = { text: await getSummarizer(cfg).ask(prompt) };
       }
       if (typeof result?.text !== 'string' || !result.text.trim())
@@ -225,13 +229,15 @@ export function replayRouter({ db, generateText = null, audioRoot = join(env.dat
   r.get('/meetings/:id/export', (req, res) => {
     try {
       if (!checkedMeeting(db, req, res)) return;
-      const format = req.query.format === 'json' ? 'json' : 'md';
+      const format = req.query.format === 'html' ? 'html' : req.query.format === 'json' ? 'json' : 'md';
       const mode = req.query.mode === 'script' ? 'script' : 'draft';
-      const output = exportReplay(db, Number(req.params.id), { mode, format });
+      const output = format === 'html'
+        ? exportReplayHtml(db, Number(req.params.id), { mode })
+        : exportReplay(db, Number(req.params.id), { mode, format });
       const filename = 'trpg-replay-' + Number(req.params.id) + '.' + format;
       res.set('Content-Disposition', 'attachment; filename="' + filename + '"');
       if (format === 'json') return res.json(output);
-      res.type('text/markdown; charset=utf-8').send(output);
+      res.type(format === 'html' ? 'text/html; charset=utf-8' : 'text/markdown; charset=utf-8').send(output);
     } catch (e) { respondError(res, e); }
   });
   return r;
