@@ -1,12 +1,12 @@
 # TRPGReplayMaker 初回セットアップガイド（Windows）
 
 ## 1. Dockerなしで起動
-1. [GitHub Releases](https://github.com/inarin14311431/TRPGReplayMaker/releases) からWindows版ZIPを取得し、ZIPの中身をすべて展開します。
+1. [Windows版ビルド（GitHub Actions）](https://github.com/inarin14311431/TRPGReplayMaker/actions/workflows/windows-portable.yml)の成功した最新の`main`実行から `TRPGReplayMaker-Windows-Portable` を取得します（GitHubログインが必要）。中の `TRPGReplayMaker-Windows.zip` を通常のフォルダーに展開します。タグ付き公開版があるときは [GitHub Releases](https://github.com/inarin14311431/TRPGReplayMaker/releases) から取得できます。
 2. `Start-ReplayMaker.bat` をダブルクリックします。Node.jsやDockerのインストールは不要です。
 3. ブラウザで `http://127.0.0.1:3000` を開きます。初回は `admin / admin` でログインし、すぐパスワードを変更します。
 4. 起動中のウィンドウは閉じないでください。閉じるとBotも停止します。
 
-**ソースZIPで始める場合**：GitHubのCode → Download ZIPには実行環境が入っていません。Node.js 24以上をインストールし、同じ起動ファイルを使います。初回だけ依存ライブラリとWeb画面を構築します。
+**必ず配布ZIPとソースZIPを区別してください。** ソースZIPで始める場合：GitHubのCode → Download ZIPには実行環境が入っていません。Node.js 24以上をインストールし、同じ起動ファイルを使います。初回だけ依存ライブラリとWeb画面を構築します。
 
 ## 2. Discord Botを作成する（初回のみ）
 1. [Discord Developer Portal](https://discord.com/developers/applications) で `New Application` を作成します。
@@ -43,4 +43,4 @@
 - ブラウザが起動直後につながらない場合は再読み込みし、起動ウィンドウのログを確認してください。
 - Docker方式が必要な場合は `Start-ReplayMaker-Docker.bat`、停止は `Stop-ReplayMaker-Docker.bat` を使用します。
 
-より詳しい説明は [Windowsポータブル導入ガイド](portable-windows.md) にあります。
+実際の画面・設定項目に沿った説明は [初心者向け利用マニュアル](user-manual.md)、ZIPの仕組みは [Windowsポータブル導入ガイド](portable-windows.md) にあります。

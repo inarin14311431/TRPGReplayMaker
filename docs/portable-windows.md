@@ -4,7 +4,7 @@
 初回導入のためにDocker DesktopやWSL2をインストールする必要はありません。
 配布版ZIPには、Windows x64向けNode.js 24実行ファイル、Bot本体、npm依存ライブラリ、ビルド済みWeb画面が含まれます。
 
-1. [Releases](https://github.com/inarin14311431/TRPGReplayMaker/releases) から `TRPGReplayMaker-Windows.zip` をダウンロード。
+1. [Windows Portable ZIPワークフロー](https://github.com/inarin14311431/TRPGReplayMaker/actions/workflows/windows-portable.yml) の成功した`main`の実行から成果物 `TRPGReplayMaker-Windows-Portable` を取得し、アーカイブ内の `TRPGReplayMaker-Windows.zip` を展開（GitHubログインが必要）。タグ付き公開版がある場合は [Releases](https://github.com/inarin14311431/TRPGReplayMaker/releases) から直接取得できます。
 2. ZIP内をすべて展開。通常のユーザーフォルダーなど書き込み可能な場所を使用。
 3. `Start-ReplayMaker.bat` をダブルクリック。ブラウザが起動したらログインし、初期パスワードを変更。
 4. Discord Botを接続して招待。
@@ -12,6 +12,8 @@
 6. `/join` → `/leave` で録音。Webのリプレイ編集画面で文章を生成しHTMLを書き出し。
 
 停止は起動コンソールで `Ctrl+C` を押します。録音中・文字起こし中の強制終了には注意してください。
+
+詳しい操作とトラブルシューティングは [利用マニュアル](user-manual.md) にあります。
 
 ## 配布ZIPとソースZIPの違い
 | パッケージ | Docker | Node.js別途導入 | Python |
@@ -30,7 +32,7 @@ Windows版の録音、SQLite DB、APIキー、ユーザー設定は `user-data` 
 ## GitHub配布を行う仕組み
 `.github/workflows/windows-portable.yml` がWindows上でNode.js本体と本体の依存ライブラリをまとめ、Web画面をビルドしてZIPを作ります。
 ビルド後に実際のWindows環境で `/api/auth/me` が200を返すことを確認するスモークテストを実行します。
-mainへの変更でGitHub ActionsのArtifactに保存し、`v*` タグの公開時にはGitHub ReleasesへプレリリースとしてZIPを添付します。
+mainへの変更でGitHub ActionsのArtifact（30日間保存）に残り、`v*` タグの公開時にはGitHub ReleasesへプレリリースとしてZIPを添付します。**タグ未作成の時点ではReleasesにZIPは並びません。**
 これはインストーラーのexeではなく、実行環境を同梱したフォルダー型のポータブルアプリです。デジタル署名付きの実行ファイルではないため、Windowsの警告や企業PCの実行制限により利用できない場合があります。
 
 ## 別方式

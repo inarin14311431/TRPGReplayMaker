@@ -7,10 +7,10 @@ Replay Studio の「アクト設定・発言者とキャストの対応」から
 - **Ollama**: ローカル文章生成。外部AI API請求は0円（PCの電力・計算資源やホスティング費用は別）
 - **サーバー共通設定**: これまで通りのAIモデル。料金見積り・予算ガードの対象外
 
-音声認識は従来どおりローカル faster-whisper（sidecar）を選ぶと音声API料金0円です。
+音声認識をローカルfaster-whisper（sidecar）にすると音声API料金は0円です。**Docker不要のWindows配布版ではPython 3.11と付属の`Setup-Local-Whisper.bat`による追加導入が必要**です。OpenAIの文字起こしAPIを選んだ場合は従量課金となります。
 
 ## 初期設定
-1. 文字起こし: Settings から `Local sidecar (faster-whisper)` を使用
+1. 文字起こし: Windows配布版ではPython 3.11を導入し、`Setup-Local-Whisper.bat`を実行。再起動後にSettingsから `Local sidecar (faster-whisper)` を使用（または従量課金のOpenAI APIを明示的に選択）
 2. 文章生成: Replay Studio の設定で `GPT-6 Luna` を選択（OpenAI APIキー登録が必要）
 3. `Luna予算（USD）` を設定（既定は1セッションあたり $0.50）
 4. 設定を保存し、「生成料金を見積もる」を押す
@@ -26,7 +26,7 @@ Replay Studio の「アクト設定・発言者とキャストの対応」から
 
 ## Ollamaを使う場合
 別途Ollamaをインストールし、例として `ollama pull qwen2.5:7b` でモデルを取得します。Web設定からそのモデル名を指定します。
-DockerからホストのOllamaへアクセスする際は `OLLAMA_URL` の接続先を確認してください。コンテナ内の127.0.0.1はホストPCではありません。
+Windowsポータブル版の `OLLAMA_URL=http://127.0.0.1:11434` は同じPCのOllamaを参照します。Docker版を選択している場合だけ、コンテナーからホストのOllamaへの接続先設定が別途必要です。
 ローカル生成は大きいモデルほどメモリやGPU容量を必要とし、処理速度と文章の質に差があります。
 
 ## その他の節約

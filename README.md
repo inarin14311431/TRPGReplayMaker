@@ -41,9 +41,11 @@ Discordのボイスチャットを録音・文字起こしし、TRPGリプレイ
 
 ## 導入手順：Docker不要のWindowsポータブル版（推奨）
 
-**一番簡単な導入**：GitHubの [Releases](https://github.com/inarin14311431/TRPGReplayMaker/releases) にあるWindows用 `TRPGReplayMaker-Windows.zip` をダウンロードして展開し、**`Start-ReplayMaker.bat` をダブルクリック**します。
+**[初心者向けの操作マニュアル](docs/user-manual.md)** に、導入、Discord Botの作成、文字起こし方式の選択、録音、原稿作成、保存、終了、トラブル対応をまとめています。
+
+**一番簡単な導入**：GitHubの [Windows Portable ZIPのビルド結果](https://github.com/inarin14311431/TRPGReplayMaker/actions/workflows/windows-portable.yml)で成功した最新の `main` 実行を開き、成果物 `TRPGReplayMaker-Windows-Portable` を取得します。その中の `TRPGReplayMaker-Windows.zip` を展開して **`Start-ReplayMaker.bat` をダブルクリック**します。Actionsの成果物取得にはGitHubへのログインが必要です。正式なタグ付き配布版が公開された後は[Releases](https://github.com/inarin14311431/TRPGReplayMaker/releases)から取得できます。
 配布ZIPにはWindows x64用のNode.js本体と依存ライブラリ、Web画面を同梱するため、Docker Desktop・WSL2・Node.jsの別途インストールは不要です。
-GitHub Actionsの [Windows Portable ZIP](https://github.com/inarin14311431/TRPGReplayMaker/actions/workflows/windows-portable.yml) からもビルド成果物を取得できます（GitHubログインが必要な場合があります）。
+Actionsで生成した成果物の保存期間は30日です。公開済みのReleasesがある場合はそちらを優先してください。
 
 1. ZIPを通常の書き込み可能なフォルダーへ**すべて展開**します。ZIP内部から直接実行しないでください。
 2. `Start-ReplayMaker.bat` を開くと、ローカルのWeb管理画面 `http://127.0.0.1:3000` が開きます。コンソールを開いたままにしてください。
