@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState } from 'react';
 import { api } from './api.js';
 
 const Ctx = createContext(null);
@@ -8,10 +8,22 @@ export function GuildProvider({ children }) {
   const [guilds, setGuilds] = useState([]);
   const [guildId, setGuildId] = useState(null);
   const [error, setError] = useState(null);
-  useEffect(() => {
-    api.guilds()
-      .then((g) => { setGuilds(g); setGuildId((cur) => cur || g[0]?.id || null); })
-      .catch((err) => { setGuilds([]); setError(err?.message ?? 'Failed to load guilds'); });
+
+  const refreshGuilds = useCallback(async () => {
+    try {
+      const list = await api.guilds();
+      const valid = Array.isArray(list) ? list : [];
+      setGuilds(valid);
+      setGuildId(cur => valid.some(g => g.id === cur) ? cur : (valid[0]?.id || null));
+      setError(null);
+      return valid;
+    } catch (err) {
+      setError(err?.message || 'サーバー情報の取得に失敗しました。');
+      return [];
+    }
   }, []);
-  return <Ctx.Provider value={{ guilds, guildId, setGuildId, error }}>{children}</Ctx.Provider>;
+
+  useEffect(() => { refreshGuilds(); }, [refreshGuilds]);
+
+  return <Ctx.Provider value={{ guilds, guildId, setGuildId, error, refreshGuilds }}>{children}</Ctx.Provider>;
 }

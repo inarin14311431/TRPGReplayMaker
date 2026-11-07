@@ -16,9 +16,22 @@ Discordのボイスチャットを録音・文字起こしし、TRPGリプレイ
 - **CLI互換**: `packages/trpg-replay/` に既存のJSON変換ツールを保持
 - **設計・ロードマップ**: `packages/trpg-replay/docs/development-plan.md`
 
-## クイックスタート
+## 誰でも使いやすい開始方法
 
-Docker Desktop / Docker Composeが動作するPCで以下を実行します。
+**Windows（初回のみDocker Desktopが必要）**
+
+1. [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) をインストールして起動します。
+2. このGitHubページの **Code → Download ZIP** でアプリを取得し、ZIPの中身をすべて展開します。
+3. フォルダー内の **`Start-ReplayMaker.bat` をダブルクリック**。Dockerの構築と起動が行われ、ブラウザで `http://127.0.0.1:3000` が開きます。
+4. 初回のログインは `admin` / `admin`。画面の案内に従い、必ず自分のパスワードへ変更します。
+5. 画面の日本語ガイドに沿ってDiscord BotのトークンとアプリケーションIDを取得し、保存して招待します。
+6. Discordで `/join` → セッション → `/leave`。ブラウザの **リプレイ作成** から原稿を生成します。
+
+終了時は `Stop-ReplayMaker.bat` を実行してください。録音データと設定はDockerの保存領域に残ります。
+
+初めての方向けの図なし手順は [初回セットアップガイド](docs/first-run-jp.md) にまとめています。
+
+**macOS / Linux（Docker Composeが必要）**
 
 ```bash
 git clone https://github.com/inarin14311431/TRPGReplayMaker.git
@@ -27,9 +40,13 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-ローカルPCの `http://127.0.0.1:3000` を開きます。初回アカウントは `admin` / `admin` で、必ず新しいパスワードを設定します。画面からDiscord Botを接続し、文字起こしモデルと文章生成プロバイダーを設定します。セッションの録音は `/join`、終了は `/leave` です。録音後は左メニューの **Replay studio** から編集できます。
+ブラウザで `http://127.0.0.1:3000` を開きます。
 
-操作手順・制限は [リプレイ編集ガイド](docs/replay-studio.md) を参照してください。
+### どこまで簡単になっているか
+
+Windowsでのコマンド入力は基本不要ですが、**Discord Botの作成とDocker Desktopの導入は初回だけ必要**です。
+ソフトウェアは現状ローカル起動型であり、GitHub URLを開くだけで動作するクラウドサービスではありません。
+Botを用意するのは管理者だけで、PLはDiscordを使うだけです。非公開の録音データをGitHubへアップロードしないでください。
 
 ## CLI変換（補助ツール）
 

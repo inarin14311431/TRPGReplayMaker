@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useGuild } from '../GuildContext.jsx';
+import GettingStarted from './GettingStarted.jsx';
 import { useLive } from '../LiveContext.jsx';
 import { Page, PageHead, SectionHead } from '../components/Page.jsx';
 import { MeetingCard } from '../components/MeetingCard.jsx';
@@ -68,7 +69,7 @@ export default function Dashboard() {
     return () => { stale = true; };
   }, [guildId]);
 
-  if (!guildId) return <Page><Empty icon={Icon.Home} title="No server selected" body="Pick a Discord server from the switcher to see its dashboard." /></Page>;
+  if (!guildId) return <GettingStarted />;
   if (error) return <Page><Empty icon={Icon.Home} title="Couldn't load dashboard" body={error} /></Page>;
   if (!meetings || !agg) return <StatSkeleton />;
 
@@ -87,6 +88,16 @@ export default function Dashboard() {
         actions={<Link to="/meetings" className="btn btn-ghost">All meetings <Icon.Arrow width={15} height={15} /></Link>}
       />
 
+      <div className="card p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-ink">TRPGリプレイを作成する</p>
+          <p className="text-xs text-muted mt-1">録音済みセッションから作成するか、初回ガイドから操作手順を確認できます。</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link className="btn btn-primary !py-2 no-underline" to="/replays">リプレイ作成</Link>
+          <Link className="btn btn-ghost !py-2 no-underline" to="/guide">使い方ガイド</Link>
+        </div>
+      </div>
       {/* Live recordings in progress */}
       {live.length > 0 && (
         <div className="space-y-4 mb-8">

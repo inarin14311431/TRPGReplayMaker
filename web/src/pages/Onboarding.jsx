@@ -3,73 +3,68 @@ import { Logo } from '../components/ui.jsx';
 import { ConnectionForm, BotStatusBadge } from '../components/Connection.jsx';
 
 const STEPS = [
-  ['Create a Discord application', <>Open the <a className="text-primary hover:underline" href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">Developer Portal</a>, click <b>New Application</b>, then under <b>Bot</b> press <b>Reset Token</b> to reveal your bot token.</>],
-  ['Invite the bot to your server', <>Under <b>OAuth2 → URL Generator</b> select scopes <code className="text-ink-2">bot</code> and <code className="text-ink-2">applications.commands</code>, plus Connect, Speak, Use Voice Activity, Send Messages, Create Public Threads, and Embed Links. Open the URL to add it.</>],
-  ['Paste your credentials here', <>Drop the bot token and your Application (client) ID into the form. Parley connects instantly, no restart.</>],
+  {
+    title: 'Discord Botを作る（初回だけ）',
+    content: <> <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-primary underline">Discord Developer Portal</a> で <b>New Application</b> を選択。<b>Bot</b> からトークンを取得し、<b>General Information</b> からアプリケーションIDをコピーします。</>,
+  },
+  {
+    title: '入力して、サーバーに招待',
+    content: <>右の欄にトークンとIDを入力してください。IDを入力すると <b>DiscordサーバーにBotを招待</b> が表示されます。Botの招待にはそのサーバーの管理権限が必要です。</>,
+  },
+  {
+    title: 'Discordで録音 → ブラウザでリプレイ',
+    content: <>Botを接続できたら、Discordのボイスチャンネルで <code className="text-ink">/join</code> を実行。終了時は <code className="text-ink">/leave</code>。その後、リプレイ作成画面から原稿にします。</>,
+  },
 ];
 
 export default function Onboarding() {
   const { status, refresh } = useSystem();
-  const conn = status?.connection;
   const bot = status?.bot;
   const connecting = bot?.state === 'starting';
   const error = bot?.state === 'error' ? bot?.error : null;
 
   return (
-    <div className="min-h-screen bg-bg text-ink flex items-center justify-center p-6">
-      <div className="w-full max-w-[920px] grid md:grid-cols-2 gap-8 items-start">
-        {/* Left: brand + steps */}
-        <div className="md:pt-6">
+    <div className="min-h-screen bg-bg text-ink flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-[970px] grid md:grid-cols-2 gap-6 md:gap-10 items-start">
+        <div className="md:pt-4">
           <div className="flex items-center gap-3 mb-6">
             <Logo size={40} />
-            <span className="font-display text-2xl font-extrabold tracking-tight">Parley</span>
+            <span className="font-display text-2xl font-extrabold tracking-tight">TRPGReplayMaker</span>
           </div>
-          <h1 className="font-display text-[26px] font-extrabold leading-tight mb-2">Connect your Discord bot</h1>
-          <p className="text-muted text-sm leading-relaxed mb-7 max-w-[46ch]">
-            Parley records voice meetings and posts AI notes. It runs entirely on your machine.
-            Connect a Discord bot once to get started.
+          <h1 className="font-display text-[26px] font-extrabold leading-tight mb-3">最初のセットアップ</h1>
+          <p className="text-muted text-sm leading-relaxed mb-7">
+            この設定を行うのはサーバー管理者だけです。セッション参加者はDiscordだけで参加できます。
           </p>
-          <ol className="space-y-5">
-            {STEPS.map(([title, body], i) => (
-              <li key={i} className="flex gap-3.5">
+          <ol className="space-y-6">
+            {STEPS.map((step, i) => (
+              <li key={step.title} className="flex gap-3.5">
                 <span className="shrink-0 mt-0.5 grid place-items-center h-7 w-7 rounded-full bg-primary-soft text-primary text-sm font-bold">{i + 1}</span>
                 <div>
-                  <p className="text-[14px] font-semibold text-ink">{title}</p>
-                  <p className="text-[13px] text-muted leading-relaxed mt-0.5">{body}</p>
+                  <h2 className="text-sm font-semibold text-ink">{step.title}</h2>
+                  <p className="text-[13px] text-muted leading-relaxed mt-1">{step.content}</p>
                 </div>
               </li>
             ))}
           </ol>
+          <p className="text-xs text-muted mt-8">録音は必ず参加者全員の同意を得て開始してください。</p>
         </div>
-
-        {/* Right: connection form */}
         <div className="card p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-sm font-bold text-ink">Credentials</h2>
+          <div className="flex justify-between items-center gap-3 mb-5">
+            <h2 className="text-base font-bold text-ink">Botの接続情報</h2>
             {bot && <BotStatusBadge bot={bot} />}
           </div>
-
           {connecting ? (
-            <div className="py-10 text-center">
+            <div role="status" className="py-10 text-center">
               <div className="mx-auto mb-4 h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-              <p className="text-sm font-medium text-ink">Connecting to Discord…</p>
-              <p className="text-xs text-muted mt-1">Registering slash commands in your servers.</p>
+              <p className="text-sm font-medium text-ink">Discordに接続しています…</p>
             </div>
           ) : (
             <>
-              {error && (
-                <div className="mb-4 text-sm text-error bg-error-soft rounded-sm px-3 py-2">
-                  {error}
-                </div>
-              )}
-              <ConnectionForm conn={conn} onSaved={refresh} submitLabel="Connect to Discord" />
+              {error && <p role="alert" className="mb-4 text-sm text-error bg-error-soft rounded-md px-3 py-2">{error}</p>}
+              <ConnectionForm conn={status?.connection} onSaved={refresh} submitLabel="保存して接続する" />
             </>
           )}
-
-          <p className="text-[11px] text-faint leading-relaxed mt-5">
-            Credentials are written to your local <code className="text-muted">.env</code> and never leave this machine.
-            The dashboard binds to localhost only.
-          </p>
+          <p className="text-xs text-muted leading-relaxed mt-5">トークンはローカル設定に保存し、招待URLには含めません。Web画面は通常、このPCからのみアクセスできます。</p>
         </div>
       </div>
     </div>
