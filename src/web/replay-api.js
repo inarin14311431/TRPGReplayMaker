@@ -11,6 +11,7 @@ import {
 } from '../replay/store.js';
 import { buildScenePrompt, exportReplay, rowsForScene } from '../replay/render.js';
 import { exportReplayHtml } from '../replay/html.js';
+import { glossaryCatalog } from '../replay/glossary.js';
 import { LUNA_MODEL, MAX_OUTPUT_TOKENS, quoteScene, replaySpentUsd, spendGuard, requestLuna, recordReplayUsage } from '../replay/economy.js';
 
 function respondError(res, err) {
@@ -35,6 +36,7 @@ function numberParam(raw) {
 export function replayRouter({ db, generateText = null, audioRoot = join(env.dataDir, 'audio') }) {
   installReplayTables(db);
   const r = Router();
+  r.get('/glossaries', (_req, res) => res.json({ presets: glossaryCatalog() }));
   // Serialize paid generations in this worker so two simultaneous requests do
   // not independently approve against the same unspent budget.
   const activePaidMeetings = new Set();

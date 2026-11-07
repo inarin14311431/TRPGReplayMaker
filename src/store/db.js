@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS track_transcriptions (
 CREATE TABLE IF NOT EXISTS replay_projects (
   meeting_id INTEGER PRIMARY KEY, title TEXT NOT NULL DEFAULT '',
   system_name TEXT NOT NULL DEFAULT '', style TEXT NOT NULL DEFAULT 'hybrid',
-  glossary TEXT NOT NULL DEFAULT '', revision INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL,
+  glossary TEXT NOT NULL DEFAULT '', glossary_preset TEXT NOT NULL DEFAULT 'auto', revision INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL,
   engine TEXT NOT NULL DEFAULT 'inherit', local_model TEXT NOT NULL DEFAULT 'qwen2.5:7b', budget_usd REAL NOT NULL DEFAULT 0.5,
   ai_provider TEXT NOT NULL DEFAULT 'gemini', ai_model TEXT NOT NULL DEFAULT 'gemini-2.5-flash'
 );
