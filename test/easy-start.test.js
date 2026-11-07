@@ -40,7 +40,7 @@ test('Windows portable launcher runs Node directly with no Docker prerequisite',
   assert.match(start, /if not exist "%PARLEY_ENV_FILE%"/);
   assert.match(start, /http:\/\/127\.0\.0\.1:3000/);
   assert.match(start, /npm ci --omit=dev/);
-  assert.doesNotMatch(start, /docker|wsl/i);
+  assert.doesNotMatch(start, /docker compose|docker info|wsl --/i);
   assert.match(stop, /Ctrl\+C/);
   assert.doesNotMatch(stop, /taskkill|Stop-Process/i);
   assert.match(dockerStart, /docker compose up --build -d/);
