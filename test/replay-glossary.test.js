@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
+import { readFileSync } from 'node:fs';
+import { generateReplaySample } from '../scripts/generate-replay-sample.mjs';
 import { openDb } from '../src/store/db.js';
 import { getReplayOverview, saveReplayProject } from '../src/replay/store.js';
 import { buildScenePrompt, rowsForScene } from '../src/replay/render.js';
@@ -105,4 +107,15 @@ test('glossary HTTP catalog is available without extra services', async () => {
     assert.ok(json.presets.find(p => p.id === 'sw25'));
     assert.ok(json.presets.find(p => p.id === 'dnd5e'));
   } finally { await new Promise(ok => server.close(ok)); }
+});
+
+
+test('sample HTML in repository matches production exporter output', () => {
+  const expected = readFileSync(new URL('../examples/nova-short-replay.html', import.meta.url), 'utf8');
+  const actual = generateReplaySample();
+  assert.equal(actual, expected);
+  assert.match(actual, /硝子の目撃者/);
+  assert.match(actual, /SCENE 02/);
+  assert.match(actual, /speech-table/);
+  assert.doesNotMatch(actual, /<script/);
 });

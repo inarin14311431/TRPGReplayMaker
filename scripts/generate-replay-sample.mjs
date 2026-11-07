@@ -3,6 +3,7 @@
 // Usage: node scripts/generate-replay-sample.mjs [output.html]
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { openDb } from '../src/store/db.js';
 import { getReplayOverview, createScene, saveReplayProject, saveSpeaker, updateReplayLine } from '../src/replay/store.js';
 import { exportReplayHtml } from '../src/replay/html.js';
@@ -48,7 +49,9 @@ export function generateReplaySample() {
   return exportReplayHtml(db, meetingId, { mode: 'script' });
 }
 
-const file = resolve(process.argv[2] || 'examples/nova-short-replay.html');
-mkdirSync(dirname(file), { recursive: true });
-writeFileSync(file, generateReplaySample(), 'utf8');
-console.log('Wrote ' + file);
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const file = resolve(process.argv[2] || 'examples/nova-short-replay.html');
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, generateReplaySample(), 'utf8');
+  console.log('Wrote ' + file);
+}
