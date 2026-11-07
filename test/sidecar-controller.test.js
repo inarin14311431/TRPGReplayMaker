@@ -137,3 +137,16 @@ test('status() leaves health fields null when /health returns no JSON', async ()
   assert.equal(st.device, null);
   assert.equal(st.batchSize, null);
 });
+
+
+test('Python sidecar venv path uses native Windows Scripts executable', () => {
+  const controller = new SidecarController({
+    sttUrl: 'http://127.0.0.1:8000',
+    deps: { exists: () => true },
+  });
+  if (process.platform === 'win32') {
+    assert.match(controller.pythonPath, /stt_sidecar[\\/]\.venv[\\/]Scripts[\\/]python\.exe$/i);
+  } else {
+    assert.match(controller.pythonPath, /stt_sidecar[\\/]\.venv[\\/]bin[\\/]python$/);
+  }
+});
