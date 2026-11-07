@@ -67,6 +67,13 @@ export async function processMeeting(db, meetingId, opts) {
   // summarize or deliver — signal the caller to discard the meeting so these
   // empties never clutter the archive.
   if (utterances.length === 0) {
+    // Do NOT discard interrupted recordings merely because their surviving PCM
+    // was silent or Whisper could not recognize speech. Preserve for inspection.
+    if (opts.tracks.some(t => t.incomplete)) {
+      db.setTranscriptionComplete(meetingId, false);
+      db.setMeetingStatus(meetingId, 'transcription_failed');
+      throw new Error('Interrupted audio has no recoverable transcript; source PCM retained.');
+    }
     db.setMeetingStatus(meetingId, 'empty');
     return { notes: null, talktime: [], empty: true };
   }

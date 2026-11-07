@@ -1,7 +1,7 @@
 // Append-only audio capture ledger. Each record is fsynced independently so a
 // process crash cannot discard metadata about previously closed speech turns.
 // The PCM itself is fsynced before a "completed" event is emitted.
-import { appendFileSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, readdirSync, statSync, writeSync } from 'node:fs';
+import { closeSync, fsyncSync, mkdirSync, openSync, readFileSync, readdirSync, statSync, writeSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { parsePcmName } from './audio.js';
 
@@ -11,7 +11,13 @@ export function appendTrackEvent(audioDir, event) {
   mkdirSync(audioDir, { recursive: true });
   const fd = openSync(join(audioDir, TRACK_JOURNAL), 'a', 0o600);
   try {
-    writeSync(fd, JSON.stringify({ v: 1, at: new Date().toISOString(), ...event }) + '\n');
+    const line = Buffer.from(JSON.stringify({ v: 1, at: new Date().toISOString(), ...event }) + '\n');
+    let pos = 0;
+    while (pos < line.length) {
+      const written = writeSync(fd, line, pos, line.length - pos);
+      if (!written) throw new Error('Short journal write');
+      pos += written;
+    }
     fsyncSync(fd);
   } finally {
     closeSync(fd);
