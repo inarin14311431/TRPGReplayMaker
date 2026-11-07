@@ -27,7 +27,7 @@ function Stage({ number, title, done, children }) {
 
 export default function GettingStarted() {
   const { status, refresh } = useSystem();
-  const { guilds, guildId } = useGuild();
+  const { guilds, guildId, refreshGuilds } = useGuild();
   const [meetingCount, setMeetingCount] = useState(null);
   const [error, setError] = useState('');
   const botReady = !!status?.bot?.connected;
@@ -48,6 +48,7 @@ export default function GettingStarted() {
 
   function updateStatus() {
     refresh();
+    refreshGuilds();
     if (guildId) api.meetings(guildId).then(x => setMeetingCount(x?.length || 0)).catch(e => setError(e.message));
   }
 
