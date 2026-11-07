@@ -37,7 +37,7 @@ test('reconcileOnBoot sweeps audio dirs for gone/terminal meetings, keeps retrya
     const db = openDb(':memory:');
     const audioRoot = join(dir, 'audio');
     // done → sweep; deleted (no row) → sweep; transcription_failed → keep.
-    const doneId = db.createMeeting({ guildId: 'g', channelId: 'c', channelName: 'x', startedAt: 't' });
+    const doneId = db.createMeeting({ guildId: 'g', channelId: 'c', channelName: 'x', startedAt: '2020-01-01T00:00:00Z' });
     db.setMeetingStatus(doneId, 'done');
     const failId = db.createMeeting({ guildId: 'g', channelId: 'c', channelName: 'x', startedAt: 't' });
     db.setMeetingStatus(failId, 'transcription_failed');
