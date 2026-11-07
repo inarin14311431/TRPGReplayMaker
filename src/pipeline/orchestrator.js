@@ -1,4 +1,5 @@
 import { transcribeTracks } from './transcribe.js';
+import { basename } from 'node:path';
 import { buildTranscript, computeTalkTime } from './summarize.js';
 import { getSummarizer } from '../adapters/summarizer/index.js';
 import { describeSummarizerError } from '../adapters/summarizer/errors.js';
@@ -6,7 +7,14 @@ import { resolveSummaryLanguage } from '../adapters/summarizer/languages.js';
 
 export async function processMeeting(db, meetingId, opts) {
   const meeting = db.getMeeting(meetingId);
-  const transcribe = opts.transcribe || ((tracks, cfg) => transcribeTracks(tracks, cfg));
+  const transcribe = opts.transcribe || ((tracks, cfg) => transcribeTracks(tracks, cfg, {
+    checkpoint: {
+      get: (track, bytes) => db.getTrackTranscription(meetingId, basename(track.pcmPath),
+        bytes, track.userId, track.startMs),
+      save: (track, bytes, utterance) => db.saveTrackTranscription(meetingId,
+        basename(track.pcmPath), bytes, utterance),
+    },
+  }));
   const summarizer = opts.summarizer || getSummarizer(opts.cfg);
 
   db.setMeetingStatus(meetingId, 'processing');

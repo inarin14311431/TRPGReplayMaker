@@ -8,6 +8,17 @@ CREATE TABLE IF NOT EXISTS meetings (
   status TEXT NOT NULL DEFAULT 'recording',
   transcription_complete INTEGER
 );
+CREATE TABLE IF NOT EXISTS track_transcriptions (
+  meeting_id INTEGER NOT NULL,
+  pcm_name TEXT NOT NULL,
+  pcm_bytes INTEGER NOT NULL,
+  user_id TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  start_ms INTEGER NOT NULL,
+  end_ms INTEGER NOT NULL,
+  text TEXT NOT NULL,
+  PRIMARY KEY (meeting_id, pcm_name)
+);
 CREATE TABLE IF NOT EXISTS attendees (
   meeting_id INTEGER, user_id TEXT, display_name TEXT,
   UNIQUE(meeting_id, user_id)
@@ -125,6 +136,7 @@ export function openDb(path) {
       sql.exec('BEGIN');
       try {
         sql.prepare(`DELETE FROM utterances WHERE meeting_id = ?`).run(id);
+        sql.prepare(`DELETE FROM track_transcriptions WHERE meeting_id = ?`).run(id);
         sql.prepare(`DELETE FROM attendees WHERE meeting_id = ?`).run(id);
         sql.prepare(`DELETE FROM summaries WHERE meeting_id = ?`).run(id);
         sql.prepare(`DELETE FROM todos WHERE meeting_id = ?`).run(id);
@@ -151,6 +163,7 @@ export function openDb(path) {
            SELECT ?, user_id, display_name FROM attendees WHERE meeting_id IN (${placeholders})`
         ).run(targetId, ...sources);
         sql.prepare(`DELETE FROM attendees WHERE meeting_id IN (${placeholders})`).run(...sources);
+        sql.prepare(`DELETE FROM track_transcriptions WHERE meeting_id IN (${placeholders})`).run(...sources);
         sql.prepare(`DELETE FROM summaries WHERE meeting_id IN (${placeholders})`).run(...sources);
         sql.prepare(`DELETE FROM todos WHERE meeting_id IN (${placeholders})`).run(...sources);
         sql.prepare(`DELETE FROM meetings WHERE id IN (${placeholders})`).run(...sources);
@@ -215,6 +228,27 @@ export function openDb(path) {
         try { sql.exec('ROLLBACK'); } catch { /* SQLite may have auto-rolled back */ }
         throw err;
       }
+    },
+    // Successful STT is checkpointed after each audio track. A crash/retry can
+    // reuse verified results instead of retranscribing all earlier speech.
+    getTrackTranscription(meetingId, pcmName, pcmBytes, userId, startMs) {
+      const row = sql.prepare(
+        'SELECT * FROM track_transcriptions WHERE meeting_id = ? AND pcm_name = ?'
+      ).get(meetingId, pcmName);
+      if (!row || row.pcm_bytes !== pcmBytes || row.user_id !== userId || row.start_ms !== startMs) return null;
+      return { userId: row.user_id, displayName: row.display_name, startMs: row.start_ms,
+        endMs: row.end_ms, text: row.text };
+    },
+    saveTrackTranscription(meetingId, pcmName, pcmBytes, utterance) {
+      sql.prepare(`INSERT INTO track_transcriptions
+        (meeting_id, pcm_name, pcm_bytes, user_id, display_name, start_ms, end_ms, text)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(meeting_id, pcm_name) DO UPDATE SET
+          pcm_bytes = excluded.pcm_bytes, user_id = excluded.user_id,
+          display_name = excluded.display_name, start_ms = excluded.start_ms,
+          end_ms = excluded.end_ms, text = excluded.text`
+      ).run(meetingId, pcmName, pcmBytes, utterance.userId, utterance.displayName,
+        utterance.startMs, utterance.endMs, utterance.text);
     },
     listUtterances(meetingId) {
       return sql.prepare(`SELECT * FROM utterances WHERE meeting_id = ? ORDER BY start_ms`).all(meetingId);
