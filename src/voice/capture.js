@@ -25,7 +25,8 @@ export class TrackRegistry {
 // voice connection); validated by the manual integration checklist.
 // `onSpeaker(userId, displayName)` fires the first time a member speaks, so the
 // caller can record latecomers who joined after the meeting started.
-export function attachCapture({ connection, guild, audioDir, registry, now = () => Date.now(), onSpeaker = null, journal = appendTrackEvent }) {
+export function attachCapture({ connection, guild, audioDir, registry, now = () => Date.now(), onSpeaker = null, journal = appendTrackEvent,
+  createDecoder = () => new prism.opus.Decoder({ rate: 16000, channels: 1, frameSize: 320 }) }) {
   mkdirSync(audioDir, { recursive: true });
 
   const onStart = (userId) => {
@@ -43,7 +44,7 @@ export function attachCapture({ connection, guild, audioDir, registry, now = () 
       const pcmPath = `${audioDir}/${pcmName(userId, startMs)}`;
 
       const opusStream = connection.receiver.subscribe(userId, { end: { behavior: EndBehaviorType.AfterSilence, duration: 1000 } });
-      const decoder = new prism.opus.Decoder({ rate: 16000, channels: 1, frameSize: 320 });
+      const decoder = createDecoder();
       const out = createWriteStream(pcmPath, { flags: 'wx', mode: 0o600 });
       let ending = false;
       let finished = false;
@@ -65,17 +66,22 @@ export function attachCapture({ connection, guild, audioDir, registry, now = () 
       const end = () => {
         if (ending) return;
         ending = true;
-        // The PCM is only safe once the stream emits 'finish', not merely when
-        // Discord's Opus stream ends. Detach and flush; do not finalize here.
+        // Explicit stop may arrive mid-speech. Flush the decoder via .end()
+        // rather than destroying it: destroying would lose buffered final PCM.
+        // Keep decoder -> out piped until its readable end closes the WAV source.
+        captureError = true; // final utterance may have been interrupted
         opusStream.unpipe?.(decoder);
-        decoder.unpipe?.(out);
         try { opusStream.destroy(); } catch { /* ignored */ }
-        try { decoder.destroy(); } catch { /* ignored */ }
-        if (!out.destroyed && !out.writableEnded) out.end();
+        try { if (!decoder.destroyed && !decoder.writableEnded) decoder.end(); }
+        catch (err) { console.error('[capture] decoder flush failed:', err.message); if (!out.destroyed) out.end(); }
       };
       const fail = (err) => {
         captureError = true;
         if (err) console.error('[capture] track error:', err.message || String(err));
+        if (decoder.destroyed) {
+          if (!out.destroyed && !out.writableEnded) out.end();
+          return;
+        }
         end();
       };
       out.on('finish', () => {
@@ -86,7 +92,9 @@ export function attachCapture({ connection, guild, audioDir, registry, now = () 
       });
       out.on('close', () => finalizeTrack(!out.writableFinished));
       out.on('error', fail);
-      opusStream.on('end', end);
+      // A natural end already propagates through both pipes and must be left
+      // to flush without force-destroying the decoder.
+      opusStream.on('end', () => { ending = true; });
       opusStream.on('error', fail);
       decoder.on('error', fail);
 
