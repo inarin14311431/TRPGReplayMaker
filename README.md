@@ -9,7 +9,7 @@ Discordのボイスチャットを録音・文字起こしし、TRPGリプレイ
 3. ブラウザの画面に沿ってDiscord Botと文字起こしを設定します。
 4. Discordで **/join → セッション → /leave**。ブラウザでリプレイを編集し、**HTMLで保存**します。
 
-**[はじめての使い方（画像なし・順番に進めるだけ）](docs/user-manual.md)**
+**[初めての方はこちら：クリックする場所から説明したマニュアル](docs/user-manual.md)**
 
 `admin / admin` の初期パスワードは必ず変更してください。配布ZIPではDockerやNode.jsの別途導入は不要です。
 
@@ -56,7 +56,6 @@ Discordのボイスチャットを録音・文字起こしし、TRPGリプレイ
 
 ダウンロード、Bot登録、文字起こし、録音、リプレイ作成、HTML保存まで順番に説明しています。
 
-- [最初の設定だけ確認する](docs/first-run-jp.md)
 - [リプレイ編集の詳しい説明](docs/replay-studio.md)
 - [TRPG用語集の使い方](docs/trpg-glossary.md)
 
@@ -64,7 +63,7 @@ Discordのボイスチャットを録音・文字起こしし、TRPGリプレイ
 
 ソースZIPから使う場合は **Node.js 24以上（npmを含む）** を用意し、`Start-ReplayMaker.bat` を実行します。初回の依存ライブラリ導入とWeb画面ビルドは自動で行われます。
 
-開発者向けのその他の起動方式や配布仕様は [Windows版の技術情報](docs/portable-windows.md) を参照してください。
+Windowsの配布ZIPを使う場合は、[操作マニュアル](docs/user-manual.md)の順番どおりに進めてください。
 
 ## CLI変換（補助ツール）
 
