@@ -59,3 +59,12 @@ audio/
 __pycache__/
 .venv/
 
+
+# TRPG local exports and source audio (never commit real sessions)
+packages/trpg-replay/output/
+sessions/
+local-recordings/
+*.opus
+*.ogg
+*.flac
+*.m4a
