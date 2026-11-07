@@ -214,3 +214,23 @@ test('same-size PCM replacement invalidates cached STT via SHA-256', async t => 
   await transcribeTracks([track], {}, deps);
   assert.equal(calls, 2);
 });
+
+test('legacy per-track cache table migrates to SHA-256 verification column', async t => {
+  const dir = scratch(t), file = join(dir, 'db.sqlite');
+  const { DatabaseSync } = await import('node:sqlite');
+  const old = new DatabaseSync(file);
+  old.exec('CREATE TABLE track_transcriptions (meeting_id INTEGER, pcm_name TEXT, pcm_bytes INTEGER, user_id TEXT, display_name TEXT, start_ms INTEGER, end_ms INTEGER, text TEXT, PRIMARY KEY(meeting_id, pcm_name))');
+  old.close();
+  const db = openDb(file);
+  const cols = db.sql.prepare('PRAGMA table_info(track_transcriptions)').all().map(x => x.name);
+  assert.ok(cols.includes('pcm_sha256'));
+  db.sql.close();
+});
+
+test('partial summary without source PCM does not promise a full recovery', t => {
+  const dir = scratch(t), db = openDb(':memory:');
+  const id = db.createMeeting({ guildId: 'g', channelId: 'c', channelName: 'partial', startedAt: 't' });
+  db.addUtterance({ meetingId: id, userId: 'u', displayName: 'A', startMs: 0, endMs: 100, text: 'partial' });
+  db.setMeetingStatus(id, 'partial');
+  assert.equal(retryPlan(db, id, { dataDir: dir }).ok, false);
+});

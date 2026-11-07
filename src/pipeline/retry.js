@@ -32,6 +32,10 @@ export function retryPlan(db, meetingId, { dataDir } = {}) {
   const audioDir = join(dataDir, 'audio', String(meetingId));
   const { tracks, skipped } = recoverPcmTracks(audioDir);
   const pcmCount = tracks.length;
+  if (meeting.status === 'partial' && pcmCount === 0) {
+    return { ok: false, action: 'none', meeting,
+      reason: 'Partial transcript exists but the original PCM is missing. Missing speech cannot be recovered.' };
+  }
   if (pcmCount > 0 && meeting.transcription_complete !== 1) {
     return { ok: true, action: 'retranscribe', meeting };
   }

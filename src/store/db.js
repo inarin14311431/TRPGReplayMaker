@@ -90,6 +90,13 @@ export function openDb(path) {
     sql.exec(`ALTER TABLE meetings ADD COLUMN transcription_complete INTEGER`);
   }
 
+  // Migration: early Phase 2 development databases stored only PCM size.
+  // Invalidate their unverified checkpoints instead of reusing stale text.
+  const trackCols = sql.prepare('PRAGMA table_info(track_transcriptions)').all();
+  if (!trackCols.some((c) => c.name === 'pcm_sha256')) {
+    sql.exec("ALTER TABLE track_transcriptions ADD COLUMN pcm_sha256 TEXT NOT NULL DEFAULT ''");
+  }
+
   // Migration: add summary_language to dbs created before the column existed.
   const cols = sql.prepare(`PRAGMA table_info(guild_config)`).all();
   if (!cols.some((c) => c.name === 'summary_language')) {
