@@ -186,6 +186,43 @@ export function transcriptPage(db, meetingId, { sceneId = null, offset = 0, limi
   return { rows: result, total, offset, limit };
 }
 
+
+/** Suggest boundaries based on transcript volume. Existing user scenes are not
+ * deleted or moved; the output is intentionally a starting point for editing.
+ */
+export function autoSplitReplay(db, meetingId, { targetChars = 12000 } = {}) {
+  const m = ensureReplay(db, meetingId);
+  if (!m) return null;
+  if (!Number.isSafeInteger(targetChars) || targetChars < 2000 || targetChars > 30000)
+    throw Object.assign(new Error('targetChars must be between 2000 and 30000.'), { status: 400 });
+  const origin = originTime(db, m);
+  const existing = db.sql.prepare('SELECT start_ms FROM replay_scenes WHERE meeting_id=? ORDER BY start_ms').all(meetingId).map(s => s.start_ms);
+  const iterator = db.sql.prepare('SELECT u.start_ms,u.text,e.corrected_text,e.hidden FROM utterances u LEFT JOIN replay_line_edits e ON e.meeting_id=u.meeting_id AND e.utterance_id=u.id WHERE u.meeting_id=? ORDER BY u.start_ms,u.id').iterate(meetingId);
+  let chars = 0, last = 0, ix = 1;
+  const created = [];
+  for (const row of iterator) {
+    if (row.hidden) continue;
+    const elapsed = Math.max(0, row.start_ms - origin);
+    while (ix < existing.length && existing[ix] <= elapsed) {
+      last = existing[ix++];
+      chars = 0;
+    }
+    chars += (row.corrected_text ?? row.text).length + 80;
+    if (chars >= targetChars && elapsed >= last + 30000) {
+      if (!existing.includes(elapsed) && !created.some(s => s.start_ms === elapsed)) {
+        const scene = createScene(db, meetingId, {
+          startMs: elapsed,
+          title: 'シーン ' + String(existing.length + created.length + 1).padStart(2, '0'),
+        });
+        created.push(scene);
+      }
+      last = elapsed;
+      chars = 0;
+    }
+  }
+  return { created, scenes: db.sql.prepare('SELECT * FROM replay_scenes WHERE meeting_id=? ORDER BY start_ms,id').all(meetingId) };
+}
+
 export function removeReplayForMeeting(db, id) {
   for (const table of ['replay_line_edits','replay_scenes','replay_speakers','replay_projects']) {
     db.sql.prepare('DELETE FROM ' + table + ' WHERE meeting_id=?').run(id);
