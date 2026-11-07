@@ -1,6 +1,17 @@
 import { convertPcmToWav } from '../voice/audio.js';
 import { getSTT, resolveSttModel } from '../adapters/stt/index.js';
 import { unlink, stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { createHash } from 'node:crypto';
+
+// Stream-hash PCM rather than relying on size alone: a track may be replaced
+// with different audio of the same byte length between failed STT attempts.
+async function pcmSignature(file) {
+  const { size } = await stat(file);
+  const hash = createHash('sha256');
+  for await (const chunk of createReadStream(file)) hash.update(chunk);
+  return { bytes: size, sha256: hash.digest('hex') };
+}
 
 // Transcribes each track through a small worker pool instead of one at a
 // time. Cloud STT (openai) tolerates much higher concurrency than the local
@@ -34,8 +45,8 @@ export async function transcribeTracks(tracks, cfg = {}, deps = {}) {
       try {
         // Only a checkpoint with an identical PCM size, user and startMs is
         // reusable. The saved text is an exact STT result, not an AI summary.
-        const bytes = checkpoint ? (await stat(t.pcmPath)).size : null;
-        const cached = checkpoint ? await checkpoint.get(t, bytes) : null;
+        const signature = checkpoint ? await pcmSignature(t.pcmPath) : null;
+        const cached = checkpoint ? await checkpoint.get(t, signature) : null;
         if (cached !== null && cached !== undefined) {
           if (cached.text) results[i] = cached; // empty speech was saved too
           continue;
@@ -53,7 +64,7 @@ export async function transcribeTracks(tracks, cfg = {}, deps = {}) {
         };
         // Persist BEFORE returning the utterance, including a silent result.
         // If storage fails, mark the track failed and keep source audio.
-        if (checkpoint) await checkpoint.save(t, bytes, record);
+        if (checkpoint) await checkpoint.save(t, signature, record);
         if (clean) results[i] = record;
       } catch (err) {
         failures.push({ userId: t.userId, displayName: t.displayName, error: err.message || String(err) });

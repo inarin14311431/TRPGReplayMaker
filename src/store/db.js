@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS track_transcriptions (
   meeting_id INTEGER NOT NULL,
   pcm_name TEXT NOT NULL,
   pcm_bytes INTEGER NOT NULL,
+  pcm_sha256 TEXT NOT NULL,
   user_id TEXT NOT NULL,
   display_name TEXT NOT NULL,
   start_ms INTEGER NOT NULL,
@@ -231,23 +232,23 @@ export function openDb(path) {
     },
     // Successful STT is checkpointed after each audio track. A crash/retry can
     // reuse verified results instead of retranscribing all earlier speech.
-    getTrackTranscription(meetingId, pcmName, pcmBytes, userId, startMs) {
+    getTrackTranscription(meetingId, pcmName, signature, userId, startMs) {
       const row = sql.prepare(
         'SELECT * FROM track_transcriptions WHERE meeting_id = ? AND pcm_name = ?'
       ).get(meetingId, pcmName);
-      if (!row || row.pcm_bytes !== pcmBytes || row.user_id !== userId || row.start_ms !== startMs) return null;
+      if (!row || row.pcm_bytes !== signature.bytes || row.pcm_sha256 !== signature.sha256 || row.user_id !== userId || row.start_ms !== startMs) return null;
       return { userId: row.user_id, displayName: row.display_name, startMs: row.start_ms,
         endMs: row.end_ms, text: row.text };
     },
-    saveTrackTranscription(meetingId, pcmName, pcmBytes, utterance) {
+    saveTrackTranscription(meetingId, pcmName, signature, utterance) {
       sql.prepare(`INSERT INTO track_transcriptions
-        (meeting_id, pcm_name, pcm_bytes, user_id, display_name, start_ms, end_ms, text)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (meeting_id, pcm_name, pcm_bytes, pcm_sha256, user_id, display_name, start_ms, end_ms, text)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(meeting_id, pcm_name) DO UPDATE SET
-          pcm_bytes = excluded.pcm_bytes, user_id = excluded.user_id,
+          pcm_bytes = excluded.pcm_bytes, pcm_sha256 = excluded.pcm_sha256, user_id = excluded.user_id,
           display_name = excluded.display_name, start_ms = excluded.start_ms,
           end_ms = excluded.end_ms, text = excluded.text`
-      ).run(meetingId, pcmName, pcmBytes, utterance.userId, utterance.displayName,
+      ).run(meetingId, pcmName, signature.bytes, signature.sha256, utterance.userId, utterance.displayName,
         utterance.startMs, utterance.endMs, utterance.text);
     },
     listUtterances(meetingId) {

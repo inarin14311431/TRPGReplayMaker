@@ -9,10 +9,10 @@ export async function processMeeting(db, meetingId, opts) {
   const meeting = db.getMeeting(meetingId);
   const transcribe = opts.transcribe || ((tracks, cfg) => transcribeTracks(tracks, cfg, {
     checkpoint: {
-      get: (track, bytes) => db.getTrackTranscription(meetingId, basename(track.pcmPath),
-        bytes, track.userId, track.startMs),
-      save: (track, bytes, utterance) => db.saveTrackTranscription(meetingId,
-        basename(track.pcmPath), bytes, utterance),
+      get: (track, signature) => db.getTrackTranscription(meetingId, basename(track.pcmPath),
+        signature, track.userId, track.startMs),
+      save: (track, signature, utterance) => db.saveTrackTranscription(meetingId,
+        basename(track.pcmPath), signature, utterance),
     },
   }));
   const summarizer = opts.summarizer || getSummarizer(opts.cfg);

@@ -127,8 +127,8 @@ test('STT cached results survive mid-session failures and retry only failed trac
   ];
   for (const track of tracks) writeFileSync(track.pcmPath, pcm);
   const checkpoint = {
-    get: (track, bytes) => db.getTrackTranscription(id, track.pcmPath.split('/').pop(), bytes, track.userId, track.startMs),
-    save: (track, bytes, record) => db.saveTrackTranscription(id, track.pcmPath.split('/').pop(), bytes, record),
+    get: (track, signature) => db.getTrackTranscription(id, track.pcmPath.split('/').pop(), signature, track.userId, track.startMs),
+    save: (track, signature, record) => db.saveTrackTranscription(id, track.pcmPath.split('/').pop(), signature, record),
   };
   let calls = [];
   const run = async (crash) => transcribeTracks(tracks, {}, {
@@ -160,8 +160,8 @@ test('checkpoint invalidated when raw PCM length changes', async t => {
     convert: async (p, w) => w, cleanup: () => {},
     stt: async () => { count++; return { text: 'Hello', words: [{ end: 1 }] }; },
     checkpoint: {
-      get: (_, bytes) => db.getTrackTranscription(id, 'u_1000.pcm', bytes, 'u', 1000),
-      save: (_, bytes, record) => db.saveTrackTranscription(id, 'u_1000.pcm', bytes, record),
+      get: (_, signature) => db.getTrackTranscription(id, 'u_1000.pcm', signature, 'u', 1000),
+      save: (_, signature, record) => db.saveTrackTranscription(id, 'u_1000.pcm', signature, record),
     },
   };
   await transcribeTracks([track], {}, deps);
@@ -189,8 +189,28 @@ test('partial source audio yields explicitly incomplete transcript, not done', a
 test('checkpoint entries are cleaned when a meeting is deleted', () => {
   const db = openDb(':memory:');
   const id = db.createMeeting({ guildId: 'g', channelId: 'c', channelName: 'test', startedAt: 't' });
-  db.saveTrackTranscription(id, 'u_1000.pcm', 640, { userId: 'u', displayName: 'A', startMs: 1000, endMs: 3000, text: 'done' });
-  assert.ok(db.getTrackTranscription(id, 'u_1000.pcm', 640, 'u', 1000));
+  db.saveTrackTranscription(id, 'u_1000.pcm', { bytes: 640, sha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }, { userId: 'u', displayName: 'A', startMs: 1000, endMs: 3000, text: 'done' });
+  assert.ok(db.getTrackTranscription(id, 'u_1000.pcm', { bytes: 640, sha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }, 'u', 1000));
   db.deleteMeeting(id);
-  assert.equal(db.getTrackTranscription(id, 'u_1000.pcm', 640, 'u', 1000), null);
+  assert.equal(db.getTrackTranscription(id, 'u_1000.pcm', { bytes: 640, sha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }, 'u', 1000), null);
+});
+
+test('same-size PCM replacement invalidates cached STT via SHA-256', async t => {
+  const dir = scratch(t), db = openDb(':memory:'), path = join(dir, 'u_2000.pcm');
+  const id = db.createMeeting({ guildId: 'g', channelId: 'c', channelName: 'test', startedAt: 't' });
+  const track = { userId: 'u', displayName: 'A', startMs: 2000, pcmPath: path };
+  writeFileSync(path, Buffer.alloc(640, 1));
+  let calls = 0;
+  const deps = {
+    convert: async (p, w) => w, cleanup: () => {},
+    stt: async () => { calls++; return { text: 'Hello', words: [{ end: 1 }] }; },
+    checkpoint: {
+      get: (_, s) => db.getTrackTranscription(id, 'u_2000.pcm', s, 'u', 2000),
+      save: (_, s, rec) => db.saveTrackTranscription(id, 'u_2000.pcm', s, rec),
+    },
+  };
+  await transcribeTracks([track], {}, deps);
+  writeFileSync(path, Buffer.alloc(640, 2));
+  await transcribeTracks([track], {}, deps);
+  assert.equal(calls, 2);
 });
