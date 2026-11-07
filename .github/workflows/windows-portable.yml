@@ -8,11 +8,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   portable:
     name: Docker-free Windows build and smoke test
+    permissions:
+      contents: write
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
@@ -119,3 +121,49 @@ jobs:
         shell: pwsh
         run: |
           gh release create "${{ github.ref_name }}" "dist/TRPGReplayMaker-Windows.zip" --title "TRPGReplayMaker ${{ github.ref_name }} (Windows Portable)" --notes "Windows x64 portable beta. Download ZIP, extract, then double-click Start-ReplayMaker.bat. Docker and Node.js installation are not needed. For cloud transcription, configure an OpenAI API key and explicitly select OpenAI in Settings; optional local Whisper needs Python 3.11. Experimental: real Discord 8-hour sessions are not yet validated." --prerelease
+
+  publish-pages:
+    name: Publish tested Windows ZIP to GitHub Pages
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: portable
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download tested Windows ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: TRPGReplayMaker-Windows-Portable
+          path: site
+
+      - name: Prepare download page
+        run: |
+          test -s site/TRPGReplayMaker-Windows.zip
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="ja">
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>TRPGReplayMaker Windows版</title>
+          <h1>TRPGReplayMaker Windows版</h1>
+          <p><a href="TRPGReplayMaker-Windows.zip" download>Windows版をダウンロード（ZIP）</a></p>
+          </html>
+          HTML
+
+      - name: Upload download site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Publish download site
+        id: deployment
+        uses: actions/deploy-pages@v4
