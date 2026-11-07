@@ -1,7 +1,8 @@
-import { createWriteStream, mkdirSync } from 'node:fs';
+import { createWriteStream, mkdirSync, fsyncSync } from 'node:fs';
 import prism from 'prism-media';
 import { EndBehaviorType } from '@discordjs/voice';
 import { pcmName } from './audio.js';
+import { appendTrackEvent } from './track-journal.js';
 
 // Pure bookkeeping of per-user tracks for a single meeting; unit-testable.
 export class TrackRegistry {
@@ -10,11 +11,11 @@ export class TrackRegistry {
   begin(userId, displayName, startMs, pcmPath, handles = {}) {
     this.active.set(userId, { userId, displayName, startMs, pcmPath, ...handles });
   }
-  finish(userId) {
+  finish(userId, { incomplete = false } = {}) {
     const t = this.active.get(userId);
     if (!t) return null;
     this.active.delete(userId);
-    this.done.push({ userId: t.userId, displayName: t.displayName, startMs: t.startMs, pcmPath: t.pcmPath });
+    this.done.push({ userId: t.userId, displayName: t.displayName, startMs: t.startMs, pcmPath: t.pcmPath, ...(incomplete ? { incomplete: true } : {}) });
     return t;
   }
   list() { return [...this.done]; }
@@ -24,7 +25,8 @@ export class TrackRegistry {
 // voice connection); validated by the manual integration checklist.
 // `onSpeaker(userId, displayName)` fires the first time a member speaks, so the
 // caller can record latecomers who joined after the meeting started.
-export function attachCapture({ connection, guild, audioDir, registry, now = () => Date.now(), onSpeaker = null }) {
+export function attachCapture({ connection, guild, audioDir, registry, now = () => Date.now(), onSpeaker = null, journal = appendTrackEvent,
+  createDecoder = () => new prism.opus.Decoder({ rate: 16000, channels: 1, frameSize: 320 }) }) {
   mkdirSync(audioDir, { recursive: true });
 
   const onStart = (userId) => {
@@ -42,18 +44,63 @@ export function attachCapture({ connection, guild, audioDir, registry, now = () 
       const pcmPath = `${audioDir}/${pcmName(userId, startMs)}`;
 
       const opusStream = connection.receiver.subscribe(userId, { end: { behavior: EndBehaviorType.AfterSilence, duration: 1000 } });
-      const decoder = new prism.opus.Decoder({ rate: 16000, channels: 1, frameSize: 320 });
-      const out = createWriteStream(pcmPath);
-      opusStream.pipe(decoder).pipe(out);
+      const decoder = createDecoder();
+      const out = createWriteStream(pcmPath, { flags: 'wx', mode: 0o600 });
+      let ending = false;
+      let finished = false;
+      let captureError = false;
 
-      const end = () => {
-        try { out.end(); } catch { /* ignore */ }
-        try { decoder.destroy(); } catch { /* ignore */ }
-        try { opusStream.destroy(); } catch { /* ignore */ }
-        registry.finish(userId);
+      const logEvent = (event) => {
+        try { journal(audioDir, { file: pcmName(userId, startMs), userId, displayName: member.displayName, ...event }); }
+        catch (err) { console.error('[capture] journal write failed:', err.message); }
       };
+      const finalizeTrack = (interrupted) => {
+        if (finished) return;
+        finished = true;
+        const incomplete = interrupted || captureError;
+        // On failure we still register a partially written file for best-effort
+        // transcription, but processMeeting will mark transcript incomplete.
+        registry.finish(userId, { incomplete });
+        logEvent({ type: incomplete ? 'interrupted' : 'completed', bytes: out.bytesWritten });
+      };
+      const end = () => {
+        if (ending) return;
+        ending = true;
+        // Explicit stop may arrive mid-speech. Flush the decoder via .end()
+        // rather than destroying it: destroying would lose buffered final PCM.
+        // Keep decoder -> out piped until its readable end closes the WAV source.
+        captureError = true; // final utterance may have been interrupted
+        opusStream.unpipe?.(decoder);
+        try { opusStream.destroy(); } catch { /* ignored */ }
+        try { if (!decoder.destroyed && !decoder.writableEnded) decoder.end(); }
+        catch (err) { console.error('[capture] decoder flush failed:', err.message); if (!out.destroyed) out.end(); }
+      };
+      const fail = (err) => {
+        captureError = true;
+        if (err) console.error('[capture] track error:', err.message || String(err));
+        if (decoder.destroyed) {
+          if (!out.destroyed && !out.writableEnded) out.end();
+          return;
+        }
+        end();
+      };
+      out.on('finish', () => {
+        // Crash safety: fsync PCM before writing a durable completion record.
+        try { if (typeof out.fd === 'number' && out.fd >= 0) fsyncSync(out.fd); }
+        catch (err) { captureError = true; console.error('[capture] PCM fsync failed:', err.message); }
+        finalizeTrack(false);
+      });
+      out.on('close', () => finalizeTrack(!out.writableFinished));
+      out.on('error', fail);
+      // A natural end already propagates through both pipes and must be left
+      // to flush without force-destroying the decoder.
+      opusStream.on('end', () => { ending = true; });
+      opusStream.on('error', fail);
+      decoder.on('error', fail);
 
       registry.begin(userId, member.displayName, startMs, pcmPath, { opusStream, decoder, out, end });
+      logEvent({ type: 'started' });
+      opusStream.pipe(decoder).pipe(out);
       // Record anyone who actually speaks as an attendee (covers latecomers who
       // joined after the start-of-meeting snapshot). Idempotent downstream.
       if (onSpeaker) { try { onSpeaker(userId, member.displayName); } catch { /* ignore */ } }

@@ -37,10 +37,8 @@ function fakeConnection() {
     receiver: {
       speaking,
       subscribe() {
-        const s = new EventEmitter();
-        s.pipe = () => s;            // opusStream.pipe(decoder).pipe(out)
-        s.destroy = () => {};
-        setImmediate(() => s.emit('end'));
+        const s = new PassThrough();
+        setImmediate(() => s.end()); // lets the real decoder and file drain
         return s;
       },
     },
@@ -103,5 +101,64 @@ test('a throwing track start is swallowed and does not crash the emitter', async
     await new Promise((r) => setImmediate(r));
     assert.equal(registry.isActive('u1'), false);
     assert.equal(registry.list().length, 0);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+// Real Node streams with a pass-through decoder exercise the flush contract
+// without requiring live Discord or native Opus packets.
+import { PassThrough } from 'node:stream';
+import { readFileSync, existsSync } from 'node:fs';
+
+test('natural end only marks a track complete after all PCM is flushed', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'trpg-drain-natural-'));
+  try {
+    const speaking = new EventEmitter();
+    const source = new PassThrough();
+    const conn = { receiver: { speaking, subscribe: () => source } };
+    const guild = fakeGuild({ u1: { displayName: 'Alice', user: { bot: false } } });
+    const registry = new TrackRegistry();
+    attachCapture({
+      connection: conn, guild, audioDir: dir, registry,
+      now: () => 12345, createDecoder: () => new PassThrough(),
+    });
+    speaking.emit('start', 'u1');
+    const payload = Buffer.alloc(65536, 0x19);
+    source.write(payload);
+    source.end();
+    await new Promise((resolve, reject) => {
+      const start = Date.now();
+      const tick = () => {
+        if (registry.list().length) return resolve();
+        if (Date.now() - start > 2000) return reject(new Error('Track did not flush'));
+        setTimeout(tick, 5);
+      };
+      tick();
+    });
+    const { pcmPath, incomplete } = registry.list()[0];
+    assert.equal(incomplete, undefined);
+    assert.deepEqual(readFileSync(pcmPath), payload);
+    assert.match(readFileSync(join(dir, 'tracks.jsonl'), 'utf8'), /"type":"completed"/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('manual stop drains a speaking track but marks last speech interrupted', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'trpg-drain-manual-'));
+  try {
+    const speaking = new EventEmitter();
+    const source = new PassThrough();
+    const conn = { receiver: { speaking, subscribe: () => source } };
+    const guild = fakeGuild({ u1: { displayName: 'Alice', user: { bot: false } } });
+    const registry = new TrackRegistry();
+    const { stopAll } = attachCapture({
+      connection: conn, guild, audioDir: dir, registry,
+      now: () => 54321, createDecoder: () => new PassThrough(),
+    });
+    speaking.emit('start', 'u1');
+    source.write(Buffer.alloc(1280, 0x3a));
+    await stopAll();
+    assert.equal(registry.list().length, 1);
+    assert.equal(registry.list()[0].incomplete, true);
+    assert.equal(readFileSync(registry.list()[0].pcmPath).length, 1280);
+    assert.match(readFileSync(join(dir, 'tracks.jsonl'), 'utf8'), /"type":"interrupted"/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

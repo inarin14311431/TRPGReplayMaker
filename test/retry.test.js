@@ -34,7 +34,7 @@ test('retryPlan: re-summarizes a known-complete transcript even when PCM remains
     db.setMeetingStatus(id, 'summary_failed');
     const audioDir = join(dir, 'audio', String(id));
     mkdirSync(audioDir, { recursive: true });
-    writeFileSync(join(audioDir, 'u_0.pcm'), 'x');
+    writeFileSync(join(audioDir, 'u_0.pcm'), Buffer.alloc(640));
 
     assert.equal(retryPlan(db, id, { dataDir: dir }).action, 'resummarize');
   } finally { cleanup(); }
@@ -50,7 +50,7 @@ test('retryPlan: retranscribes an explicitly incomplete transcript when PCM rema
     db.setMeetingStatus(id, 'summary_failed');
     const audioDir = join(dir, 'audio', String(id));
     mkdirSync(audioDir, { recursive: true });
-    writeFileSync(join(audioDir, 'u_0.pcm'), 'x');
+    writeFileSync(join(audioDir, 'u_0.pcm'), Buffer.alloc(640));
 
     assert.equal(retryPlan(db, id, { dataDir: dir }).action, 'retranscribe');
   } finally { cleanup(); }
@@ -65,7 +65,7 @@ test('retryPlan: conservatively retranscribes a legacy unknown transcript when P
     db.setMeetingStatus(id, 'summary_failed');
     const audioDir = join(dir, 'audio', String(id));
     mkdirSync(audioDir, { recursive: true });
-    writeFileSync(join(audioDir, 'u_0.pcm'), 'x');
+    writeFileSync(join(audioDir, 'u_0.pcm'), Buffer.alloc(640));
 
     assert.equal(db.getMeeting(id).transcription_complete, null);
     assert.equal(retryPlan(db, id, { dataDir: dir }).action, 'retranscribe');
@@ -80,7 +80,7 @@ test('retryPlan: retranscribe when PCM exists but no utterances', () => {
     db.setMeetingStatus(id, 'transcription_failed');
     const audioDir = join(dir, 'audio', String(id));
     mkdirSync(audioDir, { recursive: true });
-    writeFileSync(join(audioDir, 'u1_0.pcm'), 'x');
+    writeFileSync(join(audioDir, 'u1_0.pcm'), Buffer.alloc(640));
     const plan = retryPlan(db, id, { dataDir: dir });
     assert.equal(plan.ok, true);
     assert.equal(plan.action, 'retranscribe');

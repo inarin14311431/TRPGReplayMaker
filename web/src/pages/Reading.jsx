@@ -9,6 +9,10 @@ import Markdown from '../components/Markdown.jsx';
 
 /* ── retry banner (failed / stuck meetings) ───────────────────────────── */
 const STATUS_COPY = {
+  partial: {
+    title: 'Partial transcript — source audio retained',
+    body: 'Some speaker audio was interrupted or transcription failed. The saved summary may omit conversation. Retry transcription to recover missing parts before creating a replay.',
+  },
   transcription_failed: {
     title: 'Transcription failed',
     body: 'The speech-to-text sidecar was unreachable or errored while transcribing this meeting. If the audio is still on disk, you can retry the whole pipeline.',
@@ -291,7 +295,7 @@ function Note({ data, todos, guildId, meetings, refetchTodos, onReload }) {
   const notes = summary?.notes;
   const duration = fmtDuration(meeting.started_at, meeting.ended_at);
   const meetingTodos = todos.filter((t) => String(t.meeting_id) === String(meeting.id));
-  const isFailed = ['transcription_failed', 'summary_failed', 'processing'].includes(meeting.status);
+  const isFailed = ['transcription_failed', 'summary_failed', 'processing', 'partial'].includes(meeting.status);
 
   return (
     <article className="max-w-[760px] mx-auto pb-12 animate-fade-up">

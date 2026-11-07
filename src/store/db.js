@@ -8,6 +8,18 @@ CREATE TABLE IF NOT EXISTS meetings (
   status TEXT NOT NULL DEFAULT 'recording',
   transcription_complete INTEGER
 );
+CREATE TABLE IF NOT EXISTS track_transcriptions (
+  meeting_id INTEGER NOT NULL,
+  pcm_name TEXT NOT NULL,
+  pcm_bytes INTEGER NOT NULL,
+  pcm_sha256 TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  start_ms INTEGER NOT NULL,
+  end_ms INTEGER NOT NULL,
+  text TEXT NOT NULL,
+  PRIMARY KEY (meeting_id, pcm_name)
+);
 CREATE TABLE IF NOT EXISTS attendees (
   meeting_id INTEGER, user_id TEXT, display_name TEXT,
   UNIQUE(meeting_id, user_id)
@@ -78,6 +90,13 @@ export function openDb(path) {
     sql.exec(`ALTER TABLE meetings ADD COLUMN transcription_complete INTEGER`);
   }
 
+  // Migration: early Phase 2 development databases stored only PCM size.
+  // Invalidate their unverified checkpoints instead of reusing stale text.
+  const trackCols = sql.prepare('PRAGMA table_info(track_transcriptions)').all();
+  if (!trackCols.some((c) => c.name === 'pcm_sha256')) {
+    sql.exec("ALTER TABLE track_transcriptions ADD COLUMN pcm_sha256 TEXT NOT NULL DEFAULT ''");
+  }
+
   // Migration: add summary_language to dbs created before the column existed.
   const cols = sql.prepare(`PRAGMA table_info(guild_config)`).all();
   if (!cols.some((c) => c.name === 'summary_language')) {
@@ -125,6 +144,7 @@ export function openDb(path) {
       sql.exec('BEGIN');
       try {
         sql.prepare(`DELETE FROM utterances WHERE meeting_id = ?`).run(id);
+        sql.prepare(`DELETE FROM track_transcriptions WHERE meeting_id = ?`).run(id);
         sql.prepare(`DELETE FROM attendees WHERE meeting_id = ?`).run(id);
         sql.prepare(`DELETE FROM summaries WHERE meeting_id = ?`).run(id);
         sql.prepare(`DELETE FROM todos WHERE meeting_id = ?`).run(id);
@@ -151,6 +171,7 @@ export function openDb(path) {
            SELECT ?, user_id, display_name FROM attendees WHERE meeting_id IN (${placeholders})`
         ).run(targetId, ...sources);
         sql.prepare(`DELETE FROM attendees WHERE meeting_id IN (${placeholders})`).run(...sources);
+        sql.prepare(`DELETE FROM track_transcriptions WHERE meeting_id IN (${placeholders})`).run(...sources);
         sql.prepare(`DELETE FROM summaries WHERE meeting_id IN (${placeholders})`).run(...sources);
         sql.prepare(`DELETE FROM todos WHERE meeting_id IN (${placeholders})`).run(...sources);
         sql.prepare(`DELETE FROM meetings WHERE id IN (${placeholders})`).run(...sources);
@@ -215,6 +236,27 @@ export function openDb(path) {
         try { sql.exec('ROLLBACK'); } catch { /* SQLite may have auto-rolled back */ }
         throw err;
       }
+    },
+    // Successful STT is checkpointed after each audio track. A crash/retry can
+    // reuse verified results instead of retranscribing all earlier speech.
+    getTrackTranscription(meetingId, pcmName, signature, userId, startMs) {
+      const row = sql.prepare(
+        'SELECT * FROM track_transcriptions WHERE meeting_id = ? AND pcm_name = ?'
+      ).get(meetingId, pcmName);
+      if (!row || row.pcm_bytes !== signature.bytes || row.pcm_sha256 !== signature.sha256 || row.user_id !== userId || row.start_ms !== startMs) return null;
+      return { userId: row.user_id, displayName: row.display_name, startMs: row.start_ms,
+        endMs: row.end_ms, text: row.text };
+    },
+    saveTrackTranscription(meetingId, pcmName, signature, utterance) {
+      sql.prepare(`INSERT INTO track_transcriptions
+        (meeting_id, pcm_name, pcm_bytes, pcm_sha256, user_id, display_name, start_ms, end_ms, text)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(meeting_id, pcm_name) DO UPDATE SET
+          pcm_bytes = excluded.pcm_bytes, pcm_sha256 = excluded.pcm_sha256, user_id = excluded.user_id,
+          display_name = excluded.display_name, start_ms = excluded.start_ms,
+          end_ms = excluded.end_ms, text = excluded.text`
+      ).run(meetingId, pcmName, signature.bytes, signature.sha256, utterance.userId, utterance.displayName,
+        utterance.startMs, utterance.endMs, utterance.text);
     },
     listUtterances(meetingId) {
       return sql.prepare(`SELECT * FROM utterances WHERE meeting_id = ? ORDER BY start_ms`).all(meetingId);
@@ -378,7 +420,7 @@ export function openDb(path) {
           has_summary: notes_json != null,
           // Failed/stuck meetings the dashboard can offer a retry for. The
           // detail endpoint refines this with a precise plan (audio on disk?).
-          failed: ['transcription_failed', 'summary_failed', 'processing'].includes(m.status) };
+          failed: ['transcription_failed', 'summary_failed', 'processing', 'partial'].includes(m.status) };
       });
     },
 

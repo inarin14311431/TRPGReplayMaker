@@ -52,3 +52,20 @@ jobs:
       - name: Run pytest
         # Tests inject a FakeModel, so no whisper model is downloaded.
         run: python -m pytest test_server.py -q
+
+  web-build:
+    name: Web dashboard build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: web
+      - name: Build frontend
+        run: npm run build
+        working-directory: web

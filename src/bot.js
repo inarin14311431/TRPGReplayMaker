@@ -60,16 +60,23 @@ export function startBot({ db, audioRoot }) {
           summarizer: getSummarizer(cfg),
           deliver: async (notes, talktime) => postNotes({ client, meeting, cfg, notes, talktime }),
         });
-        // Success: delete the meeting's audio. On failure we keep the PCM for manual retry.
-        await rm(session.audioDir, { recursive: true, force: true }).catch(() => {});
-        // Nobody spoke — drop the empty meeting record entirely.
-        if (result?.empty) db.deleteMeeting(meetingId);
+        // Keep successful PCM for replay proofreading; policy cleanup runs
+        // separately after AUDIO_RETENTION_DAYS. Failed/partial recordings remain
+        // available for retry. Empty sessions have no useful source material.
+        if (result?.empty) {
+          await rm(session.audioDir, { recursive: true, force: true }).catch(() => {});
+          db.deleteMeeting(meetingId);
+        }
         // Summary succeeded but posting didn't (perms/deleted channel): the notes
         // are safe in the dashboard and the meeting stays 'done'. Best-effort ping
         // the origin channel so people aren't left waiting on a thread that never comes.
         else if (result?.deliveryError) {
           const ch = await client.channels.fetch(meeting.channel_id).catch(() => null);
           if (ch) await ch.send(`⚠️ Meeting ${meetingId} notes are ready in the dashboard, but I couldn't post them here: ${result.deliveryError}`).catch(() => {});
+        }
+        if (result?.partial) {
+          const ch = await client.channels.fetch(meeting.channel_id).catch(() => null);
+          if (ch) await ch.send(`⚠️ Meeting ${meetingId} has a partial transcript. Some speech may be missing; original audio was retained for a transcription retry in the dashboard.`).catch(() => {});
         }
       } catch (err) {
         console.error(`Meeting ${meetingId} failed:`, err.message);

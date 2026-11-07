@@ -1,48 +1,61 @@
-// src/store/reconcile.js
-// Boot-time housekeeping that must run whether or not the Discord bot starts
-// (web-only mode still needs it). Two jobs:
-//
-//   1. Orphaned meetings — rows left in 'recording'/'processing' by a crash mid-
-//      pipeline. Mark them 'transcription_failed' so the dashboard offers a retry
-//      (the PCM is usually still on disk) instead of stranding them forever.
-//   2. Orphaned audio dirs — data/audio/<id> directories whose meeting is gone
-//      (deleted) or already 'done'/'empty' (audio no longer needed). These
-//      accumulate unbounded otherwise.
-//
-// Pure-ish: fs access is injectable for tests.
+// Crash recovery and policy-controlled source-audio retention.
 import { readdirSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
-// Statuses whose meeting still needs its audio (a retry may retranscribe from PCM).
-const KEEP_AUDIO_STATUSES = new Set(['recording', 'processing', 'transcription_failed', 'summary_failed']);
+// 0 = preserve successful audio indefinitely; invalid values fail safely to 30d.
+export function audioRetentionDays(value = process.env.AUDIO_RETENTION_DAYS) {
+  if (value == null || value === '') return 30;
+  const n = Number(value);
+  return Number.isSafeInteger(n) && n >= 0 ? n : 30;
+}
 
-export async function reconcileOnBoot(db, audioRoot, { readdir = readdirSync, remove = rm, log = console } = {}) {
-  const result = { orphanMeetings: 0, sweptDirs: 0 };
+const KEEP_ALWAYS = new Set(['recording', 'processing', 'transcription_failed', 'summary_failed', 'partial']);
 
-  // 1) Orphaned meetings from a crash mid-pipeline.
-  for (const m of db.findOrphanedMeetings()) {
-    db.setMeetingStatus(m.id, 'transcription_failed');
-    result.orphanMeetings += 1;
-    log.warn?.(`[reconcile] meeting ${m.id} was mid-pipeline at last shutdown → transcription_failed (retry from the dashboard).`);
-  }
+function shouldDeleteAudio(meeting, nowMs, retentionDays) {
+  if (!meeting || meeting.status === 'empty') return true;
+  if (KEEP_ALWAYS.has(meeting.status)) return false;
+  if (meeting.status !== 'done') return false; // unknown state: never auto-delete
+  if (retentionDays === 0) return false;
+  const endedMs = Date.parse(meeting.ended_at || meeting.started_at || '');
+  // Invalid timestamps: keep, rather than deleting audio we cannot date.
+  return Number.isFinite(endedMs) && endedMs + retentionDays * 86_400_000 < nowMs;
+}
 
-  // 2) Sweep audio dirs that no live/failed meeting still needs.
-  let dirs = [];
-  try { dirs = readdir(audioRoot, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name); }
-  catch { dirs = []; } // no audio root yet → nothing to sweep
-
+// Safe to call while the bot is live: actively recording, retryable or partial
+// meeting audio is never deleted. Deletion counts reflect confirmed successes.
+export async function sweepRetainedAudio(db, audioRoot, {
+  readdir = readdirSync, remove = rm, log = console,
+  retentionDays = audioRetentionDays(), nowMs = Date.now(),
+} = {}) {
+  let dirs;
+  try { dirs = readdir(audioRoot, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name); }
+  catch (e) { if (e.code === 'ENOENT') return 0; throw e; }
+  let swept = 0;
   for (const name of dirs) {
-    const id = Number(name);
-    if (!Number.isInteger(id)) continue; // ignore non-numeric dirs we didn't create
-    const meeting = db.getMeeting(id);
-    // Remove when the meeting is gone (deleted) or in a terminal state that no
-    // longer needs the PCM. Keep dirs for meetings that might still be retried.
-    if (!meeting || !KEEP_AUDIO_STATUSES.has(meeting.status)) {
-      await remove(join(audioRoot, name), { recursive: true, force: true }).catch(() => {});
-      result.sweptDirs += 1;
+    if (!/^\d+$/.test(name) || !Number.isSafeInteger(Number(name))) continue;
+    const meeting = db.getMeeting(Number(name));
+    if (!shouldDeleteAudio(meeting, nowMs, retentionDays)) continue;
+    try {
+      await remove(join(audioRoot, name), { recursive: true, force: true });
+      swept++;
+    } catch (err) {
+      log.warn?.('[retention] failed to remove meeting audio ' + name + ': ' + err.message);
     }
   }
-  if (result.sweptDirs > 0) log.log?.(`[reconcile] swept ${result.sweptDirs} orphaned audio dir(s).`);
+  if (swept) log.log?.('[retention] removed ' + swept + ' expired or orphaned audio dir(s).');
+  return swept;
+}
+
+// Runs only before the application starts; do not call during a live recording.
+export async function reconcileOnBoot(db, audioRoot, opts = {}) {
+  const result = { orphanMeetings: 0, sweptDirs: 0 };
+  for (const m of db.findOrphanedMeetings()) {
+    // Previously captured PCM remains in the audio dir; retry reads it directly.
+    db.setMeetingStatus(m.id, 'transcription_failed');
+    result.orphanMeetings++;
+    opts.log?.warn?.('[reconcile] meeting ' + m.id + ' interrupted; saved PCM can be retried.');
+  }
+  result.sweptDirs = await sweepRetainedAudio(db, audioRoot, opts);
   return result;
 }

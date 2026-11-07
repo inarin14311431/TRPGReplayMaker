@@ -13,7 +13,7 @@ export function MeetingCard({ m }) {
       <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <span className="chip"><Icon.Hash width={12} height={12} />{m.channel_name}</span>
-          {!m.has_summary && <StatusPill status={m.status} />}
+          {(!m.has_summary || m.status === 'partial') && <StatusPill status={m.status} />}
         </div>
         <span className="text-xs text-muted shrink-0">{fmtRelative(m.started_at)}</span>
       </div>

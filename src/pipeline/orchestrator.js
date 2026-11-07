@@ -1,4 +1,5 @@
 import { transcribeTracks } from './transcribe.js';
+import { basename } from 'node:path';
 import { buildTranscript, computeTalkTime } from './summarize.js';
 import { getSummarizer } from '../adapters/summarizer/index.js';
 import { describeSummarizerError } from '../adapters/summarizer/errors.js';
@@ -6,7 +7,14 @@ import { resolveSummaryLanguage } from '../adapters/summarizer/languages.js';
 
 export async function processMeeting(db, meetingId, opts) {
   const meeting = db.getMeeting(meetingId);
-  const transcribe = opts.transcribe || ((tracks, cfg) => transcribeTracks(tracks, cfg));
+  const transcribe = opts.transcribe || ((tracks, cfg) => transcribeTracks(tracks, cfg, {
+    checkpoint: {
+      get: (track, signature) => db.getTrackTranscription(meetingId, basename(track.pcmPath),
+        signature, track.userId, track.startMs),
+      save: (track, signature, utterance) => db.saveTrackTranscription(meetingId,
+        basename(track.pcmPath), signature, utterance),
+    },
+  }));
   const summarizer = opts.summarizer || getSummarizer(opts.cfg);
 
   db.setMeetingStatus(meetingId, 'processing');
@@ -46,8 +54,9 @@ export async function processMeeting(db, meetingId, opts) {
     err.userMessage = `Transcription failed — the STT sidecar may be down or unreachable. (${err.message})`;
     throw err;
   }
+  const transcriptComplete = failures.length === 0 && !opts.tracks.some(t => t.incomplete);
   try {
-    db.replaceUtterances(meetingId, utterances, { complete: failures.length === 0 });
+    db.replaceUtterances(meetingId, utterances, { complete: transcriptComplete });
   } catch (err) {
     db.setMeetingStatus(meetingId, 'transcription_failed');
     err.userMessage = `Transcription could not be saved safely. (${err.message})`;
@@ -58,6 +67,13 @@ export async function processMeeting(db, meetingId, opts) {
   // summarize or deliver — signal the caller to discard the meeting so these
   // empties never clutter the archive.
   if (utterances.length === 0) {
+    // Do NOT discard interrupted recordings merely because their surviving PCM
+    // was silent or Whisper could not recognize speech. Preserve for inspection.
+    if (opts.tracks.some(t => t.incomplete)) {
+      db.setTranscriptionComplete(meetingId, false);
+      db.setMeetingStatus(meetingId, 'transcription_failed');
+      throw new Error('Interrupted audio has no recoverable transcript; source PCM retained.');
+    }
     db.setMeetingStatus(meetingId, 'empty');
     return { notes: null, talktime: [], empty: true };
   }
@@ -99,7 +115,7 @@ export async function processMeeting(db, meetingId, opts) {
   // timeline view. (Mirrors what db.backfillTodos + realignTodoDates already do
   // for backfilled rows.)
   db.seedTodos(meetingId, meeting.guild_id, notes.actionItems || [], meeting.started_at);
-  db.setMeetingStatus(meetingId, 'done', new Date().toISOString());
+  db.setMeetingStatus(meetingId, transcriptComplete ? 'done' : 'partial', new Date().toISOString());
 
   // Delivery is the last step and runs AFTER the summary is safely persisted, so
   // a posting failure (missing perms, deleted channel) must not throw away a
@@ -117,5 +133,5 @@ export async function processMeeting(db, meetingId, opts) {
       console.error(`[pipeline] meeting ${meetingId} summarized but delivery failed: ${deliveryError}`);
     }
   }
-  return { notes, talktime, delivered, deliveryError };
+  return { notes, talktime, delivered, deliveryError, partial: !transcriptComplete };
 }

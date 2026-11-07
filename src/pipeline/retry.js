@@ -10,34 +10,39 @@
 //
 // Returns { ok, action, status, reason }.
 import { join } from 'node:path';
-import { readdirSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { getGuildConfig } from '../store/config.js';
 import { getSummarizer } from '../adapters/summarizer/index.js';
 import { buildTranscript, computeTalkTime } from './summarize.js';
 import { resolveSummaryLanguage } from '../adapters/summarizer/languages.js';
 import { describeSummarizerError } from '../adapters/summarizer/errors.js';
-import { parsePcmName } from '../voice/audio.js';
+import { recoverPcmTracks } from '../voice/track-journal.js';
 import { processMeeting } from './orchestrator.js';
 
 // Statuses the UI should offer a retry for.
-export const RETRYABLE_STATUSES = new Set(['transcription_failed', 'summary_failed', 'processing', 'recording']);
+export const RETRYABLE_STATUSES = new Set(['transcription_failed', 'summary_failed', 'processing', 'recording', 'partial']);
 
 /** Decide what a retry would do, without doing it (for enabling UI + messaging). */
-export function retryPlan(db, meetingId, { dataDir, exists = readdirSync } = {}) {
+export function retryPlan(db, meetingId, { dataDir } = {}) {
   const meeting = db.getMeeting(meetingId);
   if (!meeting) return { ok: false, action: 'none', reason: 'Meeting not found.' };
   const hasUtterances = db.listUtterances(meetingId).length > 0;
-  let pcmCount = 0;
-  try { pcmCount = exists(join(dataDir, 'audio', String(meetingId))).filter((f) => f.endsWith('.pcm')).length; }
-  catch { pcmCount = 0; }
+  // Only count valid PCM tracks. Include crashed / unjournaled tracks as
+  // incomplete rather than silently losing them. Bad files remain on disk.
+  const audioDir = join(dataDir, 'audio', String(meetingId));
+  const { tracks, skipped } = recoverPcmTracks(audioDir);
+  const pcmCount = tracks.length;
+  if (meeting.status === 'partial' && pcmCount === 0) {
+    return { ok: false, action: 'none', meeting,
+      reason: 'Partial transcript exists but the original PCM is missing. Missing speech cannot be recovered.' };
+  }
   if (pcmCount > 0 && meeting.transcription_complete !== 1) {
     return { ok: true, action: 'retranscribe', meeting };
   }
   if (hasUtterances) return { ok: true, action: 'resummarize', meeting };
   if (pcmCount > 0) return { ok: true, action: 'retranscribe', meeting };
   return { ok: false, action: 'none', meeting,
-    reason: 'No transcript and no saved audio remain for this meeting, so it cannot be retried.' };
+    reason: skipped.length ? 'No usable PCM remains (empty/truncated audio files need manual recovery).' : 'No transcript and no saved audio remain for this meeting, so it cannot be retried.' };
 }
 
 /**
@@ -84,19 +89,15 @@ export async function retryMeeting(db, meetingId, { dataDir, deliver = null } = 
   // retranscribe: rebuild tracks from the PCM filenames and run the full pipeline.
   const audioDir = join(dataDir, 'audio', String(meetingId));
   const nameById = new Map(db.listAttendees(meetingId).map((a) => [a.user_id, a.display_name]));
-  const tracks = readdirSync(audioDir)
-    .filter((f) => f.endsWith('.pcm'))
-    .map((f) => {
-      const { userId, startMs } = parsePcmName(f);
-      return { userId, displayName: nameById.get(userId) || userId, startMs, pcmPath: join(audioDir, f) };
-    })
-    .sort((a, b) => a.startMs - b.startMs);
+  const { tracks, skipped } = recoverPcmTracks(audioDir, nameById);
+  if (skipped.length) console.warn(`[retry] skipped ${skipped.length} invalid PCM files in meeting ${meetingId}`);
+  if (tracks.length === 0) return { ok: false, action: 'retranscribe', status: meeting.status,
+    reason: 'No usable PCM tracks remained after validating audio files.' };
   try {
     const { notes, empty } = await processMeeting(db, meetingId, { tracks, cfg, deliver });
-    // Success (or a confirmed-empty meeting): the PCM has served its purpose, so
-    // drop the audio dir. The bot's own finalize does this too, but a retry runs
-    // outside that path and would otherwise leak the directory forever.
-    await rm(audioDir, { recursive: true, force: true }).catch(() => {});
+    // Retain source PCM after successful transcription for TRPG replay
+    // verification. Scheduled retention handles deletion after the policy age.
+    if (empty) await rm(audioDir, { recursive: true, force: true }).catch(() => {});
     return { ok: true, action: 'retranscribe', status: db.getMeeting(meetingId)?.status, empty: !notes || !!empty };
   } catch (err) {
     // Keep the PCM on failure so a later retry can try again.
