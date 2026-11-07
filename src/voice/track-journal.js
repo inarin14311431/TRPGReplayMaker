@@ -11,7 +11,9 @@ export function appendTrackEvent(audioDir, event) {
   mkdirSync(audioDir, { recursive: true });
   const fd = openSync(join(audioDir, TRACK_JOURNAL), 'a', 0o600);
   try {
-    const line = Buffer.from(JSON.stringify({ v: 1, at: new Date().toISOString(), ...event }) + '\n');
+    // Always start with a record separator: if the previous process crashed
+    // halfway through a line, the next valid event must remain parseable.
+    const line = Buffer.from('\n' + JSON.stringify({ v: 1, at: new Date().toISOString(), ...event }) + '\n');
     let pos = 0;
     while (pos < line.length) {
       const written = writeSync(fd, line, pos, line.length - pos);

@@ -234,3 +234,11 @@ test('partial summary without source PCM does not promise a full recovery', t =>
   db.setMeetingStatus(id, 'partial');
   assert.equal(retryPlan(db, id, { dataDir: dir }).ok, false);
 });
+
+test('new journal writes stay parseable after a torn previous line', t => {
+  const dir = scratch(t), file = 'u_1000.pcm';
+  appendTrackEvent(dir, { type: 'started', file, userId: 'u' });
+  appendFileSync(join(dir, TRACK_JOURNAL), '{"v":1,"file":"u_1000.pcm","type":"comp');
+  appendTrackEvent(dir, { type: 'completed', file, userId: 'u', bytes: 640 });
+  assert.deepEqual(readTrackEvents(dir).map(e => e.type), ['started', 'completed']);
+});
