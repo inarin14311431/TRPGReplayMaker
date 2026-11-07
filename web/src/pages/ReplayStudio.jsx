@@ -217,7 +217,9 @@ function ReplayWorkspace({ id }) {
       return;
     }
     const costInfo = estimate.engine === 'luna'
-      ? ('参考概算 
+      ? ('概算USD ' + estimate.estimatedPendingUsd.toFixed(4) + ' / 予約額USD ' + estimate.reservedPendingUsd.toFixed(4))
+      : estimate.engine === 'local' ? '外部文章生成API料金0円（ローカル計算）' : 'サーバー共通AI設定（料金未計算）';
+    if (!window.confirm(ungenerated.length + 'シーンを順番にAI生成します。 ' + costInfo + ' 開始しますか？')) return;
     setError(''); setNote(''); setWorking(true);
     const failures = [];
     let completed = 0;
