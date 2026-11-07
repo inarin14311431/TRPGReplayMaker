@@ -1,6 +1,7 @@
 // Durable TRPG replay workbench. Original speech stays in utterances;
 // all corrections, hiding, speaker roles and AI drafts are separate records.
 import { installReplayUsageTable, REPLAY_ENGINES, DEFAULT_BUDGET_USD } from './economy.js';
+import { GLOSSARY_CHOICES } from './glossary.js';
 
 export const REPLAY_STYLES = ['dialogue', 'hybrid', 'novel'];
 export const AI_PROVIDERS = ['gemini', 'openai', 'openrouter', 'opencode', 'ollama'];
@@ -87,6 +88,8 @@ export function saveReplayProject(db, id, patch) {
   const title = patch.title === undefined ? old.title : clean(patch.title, 160);
   const system = patch.systemName === undefined ? old.system_name : clean(patch.systemName, 100);
   const glossary = patch.glossary === undefined ? old.glossary : clean(patch.glossary, 10000);
+  const glossaryPreset = patch.glossaryPreset === undefined ? old.glossary_preset : patch.glossaryPreset;
+  if (!GLOSSARY_CHOICES.includes(glossaryPreset)) throw Object.assign(new Error('Invalid glossary preset.'), { status: 400 });
   const style = patch.style === undefined ? old.style : patch.style;
   const engine = patch.engine === undefined ? old.engine : patch.engine;
   const localModel = patch.localModel === undefined ? old.local_model : clean(patch.localModel, 100);
@@ -100,8 +103,8 @@ export function saveReplayProject(db, id, patch) {
   if (!localModel || !/^[\w.:-]{1,100}$/.test(localModel)) throw Object.assign(new Error('Invalid local Ollama model.'), { status: 400 });
   if (!title) throw Object.assign(new Error('Title is required.'), { status: 400 });
   if (!valid(style, REPLAY_STYLES)) throw Object.assign(new Error('Invalid replay style.'), { status: 400 });
-  db.sql.prepare('UPDATE replay_projects SET title=?, system_name=?, glossary=?, style=?, engine=?, local_model=?, budget_usd=?, ai_provider=?, ai_model=?, revision=revision+1, updated_at=? WHERE meeting_id=?')
-    .run(title, system, glossary, style, engine, localModel, budgetUsd, aiProvider, aiModel, now(), id);
+  db.sql.prepare('UPDATE replay_projects SET title=?, system_name=?, glossary=?, glossary_preset=?, style=?, engine=?, local_model=?, budget_usd=?, ai_provider=?, ai_model=?, revision=revision+1, updated_at=? WHERE meeting_id=?')
+    .run(title, system, glossary, glossaryPreset, style, engine, localModel, budgetUsd, aiProvider, aiModel, now(), id);
   return db.sql.prepare('SELECT * FROM replay_projects WHERE meeting_id = ?').get(id);
 }
 

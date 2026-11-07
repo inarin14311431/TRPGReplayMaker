@@ -66,6 +66,7 @@ export const api = {
 
   // TRPG replay studio — original transcript remains unmodified.
   replayOverview: id => fetch('/api/replays/meetings/' + id).then(json),
+  replayGlossaries: () => fetch('/api/replays/glossaries').then(json),
   replayCostPreview: id => fetch('/api/replays/meetings/' + id + '/cost-preview').then(json),
   replayLines: (id, { sceneId, offset = 0, limit = 80 } = {}) => {
     const p = new URLSearchParams({ offset: String(offset), limit: String(limit) });

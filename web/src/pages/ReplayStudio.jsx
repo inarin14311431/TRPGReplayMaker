@@ -136,18 +136,26 @@ function ReplayWorkspace({ id }) {
   const [bulkProgress, setBulkProgress] = useState(null);
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
-  const [settings, setSettings] = useState({ title: '', systemName: '', style: 'hybrid', glossary: '', engine: 'inherit', localModel: 'qwen2.5:7b', budgetUsd: 0.5, aiProvider: 'gemini', aiModel: 'gemini-2.5-flash' });
+  const [settings, setSettings] = useState({ title: '', systemName: '', style: 'hybrid', glossary: '', glossaryPreset: 'auto', engine: 'inherit', localModel: 'qwen2.5:7b', budgetUsd: 0.5, aiProvider: 'gemini', aiModel: 'gemini-2.5-flash' });
   const [quote, setQuote] = useState(null);
+  const [glossaries, setGlossaries] = useState([]);
   const [newSceneTitle, setNewSceneTitle] = useState('');
   const [editSceneTitle, setEditSceneTitle] = useState('');
   const [sceneTime, setSceneTime] = useState('00:00:00');
   const [draft, setDraft] = useState('');
   const [refreshPage, setRefreshPage] = useState(0);
 
+  useEffect(() => {
+    let active = true;
+    api.replayGlossaries().then(d => { if (active) setGlossaries(d.presets || []); })
+      .catch(e => { if (active) setError('用語集の取得に失敗しました: ' + e.message); });
+    return () => { active = false; };
+  }, []);
+
   const reload = useCallback(async (preserveScene = true) => {
     const d = await api.replayOverview(id);
     setData(d);
-    setSettings({ title: d.project.title, systemName: d.project.system_name, style: d.project.style, glossary: d.project.glossary, engine: d.project.engine, localModel: d.project.local_model, budgetUsd: d.project.budget_usd, aiProvider: d.project.ai_provider, aiModel: d.project.ai_model });
+    setSettings({ title: d.project.title, systemName: d.project.system_name, style: d.project.style, glossary: d.project.glossary, glossaryPreset: d.project.glossary_preset || 'auto', engine: d.project.engine, localModel: d.project.local_model, budgetUsd: d.project.budget_usd, aiProvider: d.project.ai_provider, aiModel: d.project.ai_model });
     setSelected(prev => preserveScene && d.scenes.some(s => s.id === prev) ? prev : d.scenes[0]?.id);
     setLoading(false);
     return d;
@@ -157,7 +165,7 @@ function ReplayWorkspace({ id }) {
     setLoading(true); setSelected(null); setPage({ rows: [], total: 0 }); setError('');
     api.replayOverview(id).then(d => {
       if (!alive) return;
-      setData(d); setSettings({ title: d.project.title, systemName: d.project.system_name, style: d.project.style, glossary: d.project.glossary, engine: d.project.engine, localModel: d.project.local_model, budgetUsd: d.project.budget_usd, aiProvider: d.project.ai_provider, aiModel: d.project.ai_model });
+      setData(d); setSettings({ title: d.project.title, systemName: d.project.system_name, style: d.project.style, glossary: d.project.glossary, glossaryPreset: d.project.glossary_preset || 'auto', engine: d.project.engine, localModel: d.project.local_model, budgetUsd: d.project.budget_usd, aiProvider: d.project.ai_provider, aiModel: d.project.ai_model });
       setSelected(d.scenes[0]?.id); setLoading(false);
     }).catch(e => { if (alive) { setError(e.message); setLoading(false); } });
     return () => { alive = false; };
@@ -271,9 +279,38 @@ function ReplayWorkspace({ id }) {
           </label>
           <div className="flex items-end"><button className={primary} disabled={working} onClick={saveSettings}>アクト設定を保存</button></div>
         </div>
-        <label className="block text-xs text-muted mt-3">専門用語辞書（表記の参考。1行1項目）
-          <textarea rows={3} className={input + ' mt-1'} value={settings.glossary} onChange={e => setSettings(s => ({ ...s, glossary: e.target.value }))} placeholder="神業、スタイル、キャスト名など" />
-        </label>
+        <div className="mt-4 rounded-md border border-border p-4 space-y-3">
+          <h3 className="text-sm font-bold text-ink">用語集（すべてのTRPGに対応）</h3>
+          <p className="text-xs text-muted">共通用語と各システム専用語をAI原稿生成時に参照します。自動選択はシステム名から判別します。元の音声認識結果は書き換えません。</p>
+          <label className="block text-xs text-muted">使用する用語集
+            <select aria-label="用語集プリセット" value={settings.glossaryPreset} className={input + ' mt-1'}
+              onChange={e => setSettings(s => ({ ...s, glossaryPreset: e.target.value }))}>
+              <option value="auto">自動選択（TRPG共通 ＋ システム別）</option>
+              <option value="common">TRPG共通のみ</option>
+              {glossaries.filter(g => g.id !== 'common').map(g =>
+                <option key={g.id} value={g.id}>TRPG共通 ＋ {g.label}</option>)}
+              <option value="none">プリセットなし（独自用語のみ）</option>
+            </select>
+          </label>
+          <details className="text-xs text-muted">
+            <summary className="cursor-pointer text-primary">収録済みの用語と説明を見る</summary>
+            <div className="grid md:grid-cols-2 gap-3 mt-3">
+              {glossaries.map(g => <details key={g.id} className="rounded-md border border-border p-3">
+                <summary className="cursor-pointer font-semibold text-ink">{g.label}（{g.terms.length}語）</summary>
+                <p className="mt-2 text-muted">{g.description}</p>
+                <div className="space-y-2 mt-3 max-h-64 overflow-auto">
+                  {g.terms.map(t => <p key={t.term}><b className="text-ink">{t.term}</b>（{t.reading}）<span className="block">{t.hint}</span></p>)}
+                </div>
+              </details>)}
+            </div>
+          </details>
+          <label className="block text-xs text-muted">このアクト固有の用語・登場人物（1行1件）
+            <textarea rows={4} className={input + ' mt-1'} value={settings.glossary}
+              onChange={e => setSettings(s => ({ ...s, glossary: e.target.value }))}
+              placeholder={'正式表記｜読み・別名｜短い説明\n烏丸茉莉｜からすま まつり｜このアクトのキャスト\n紫苑司｜しおんじ｜ハンドル名'} />
+          </label>
+          <p className="text-xs text-muted">上の「アクト設定を保存」で保存します。用語集はAIへの参考情報です。確定的な誤変換修正は「文字起こし・原文照合」で行ってください。</p>
+        </div>
 
         <div className="mt-4 p-4 rounded-md border border-border bg-surface-2 space-y-2">
           <h3 className="text-sm font-bold text-ink">低価格でリプレイを生成する</h3>

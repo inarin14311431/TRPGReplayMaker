@@ -23,6 +23,15 @@ Discordのボイスチャットを録音・文字起こしし、TRPGリプレイ
 使い方と制約は [N◎VA・BYOK・HTMLガイド](docs/nova-replay.md) にまとめています。
 
 **公式のタロット、ルールブック本文、キャスト画像、商標ロゴは配布ファイルに含みません。** 利用者が権利を持つ画像のみを別途使用してください。
+## 完成リプレイの見本・共通用語集
+
+- [短編サンプル『硝子の目撃者』の単体HTML](examples/nova-short-replay.html) — 架空の二つのシーン、RLの描写・キャスト台詞・PL会話を含みます。ファイルをダウンロードしてブラウザで開いてください。
+- [サンプルHTML生成スクリプト](scripts/generate-replay-sample.mjs) — 実際のエクスポーターを呼び出し、同じ題材のHTMLを再生成します。`node scripts/generate-replay-sample.mjs`
+- [TRPG共通・システム別の用語集](docs/trpg-glossary.md) — N◎VA、クトゥルフ神話TRPG、ダブルクロス、ソード・ワールド2.5、D&D、共通用語を収録。プリセットはアクトのシステム名から自動選択されます。
+
+用語集は**文章生成AIの補助情報**です。Whisperの音声認識に単語登録する機能や、録音の自動書換え機能ではありません。
+正式表記・読み・説明をアクトごとに追加できます。公式ルール本文や画像は同梱していません。
+
 ## 構成
 
 - **Bot・録音・文字起こし**: [Parley](https://github.com/SakethKanchi/parley) のソースをベースに拡張

@@ -46,6 +46,7 @@ export function installReplayUsageTable(db) {
   if (!cols.includes('budget_usd')) db.sql.exec('ALTER TABLE replay_projects ADD COLUMN budget_usd REAL NOT NULL DEFAULT 0.5');
   if (!cols.includes('ai_provider')) db.sql.exec("ALTER TABLE replay_projects ADD COLUMN ai_provider TEXT NOT NULL DEFAULT 'gemini'");
   if (!cols.includes('ai_model')) db.sql.exec("ALTER TABLE replay_projects ADD COLUMN ai_model TEXT NOT NULL DEFAULT 'gemini-2.5-flash'");
+  if (!cols.includes('glossary_preset')) db.sql.exec("ALTER TABLE replay_projects ADD COLUMN glossary_preset TEXT NOT NULL DEFAULT 'auto'");
   db.sql.exec('CREATE TABLE IF NOT EXISTS replay_ai_usage (' +
     'id INTEGER PRIMARY KEY AUTOINCREMENT, meeting_id INTEGER NOT NULL, scene_id INTEGER NOT NULL,' +
     'engine TEXT NOT NULL, model TEXT NOT NULL, input_tokens INTEGER NOT NULL,' +
