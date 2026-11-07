@@ -5,7 +5,7 @@ import { openDb } from '../src/store/db.js';
 import { replayRouter } from '../src/web/replay-api.js';
 import {
   installReplayTables, getReplayOverview, transcriptPage, createScene, updateReplayLine,
-  saveReplayProject, saveSpeaker, deleteScene, removeReplayForMeeting,
+  saveReplayProject, saveSpeaker, deleteScene, removeReplayForMeeting, autoSplitReplay,
 } from '../src/replay/store.js';
 import { exportReplay, rowsForScene, buildScenePrompt, clock } from '../src/replay/render.js';
 
@@ -206,4 +206,30 @@ test('merge preserves corrected utterance overlays from source meeting', () => {
   const row = transcriptPage(db, id).rows.find(x => x.id === line.id);
   assert.equal(row.correctedText, '修正済み追加発言');
   assert.equal(getReplayOverview(db, second), null);
+});
+
+test('automatic split handles long sessions without removing manual scene boundaries', () => {
+  const { db, id, origin } = seed();
+  getReplayOverview(db, id);
+  createScene(db, id, { title: '手動の場面', startMs: 3600000 });
+  for (let i = 0; i < 10; i++) {
+    db.addUtterance({ meetingId: id, userId: 'pl', displayName: '参加者',
+      startMs: origin + 4000000 + i * 60000, endMs: origin + 4001000 + i * 60000,
+      text: '描写'.repeat(800) });
+  }
+  const x = autoSplitReplay(db, id, { targetChars: 3000 });
+  assert.ok(x.created.length >= 2);
+  assert.ok(x.scenes.some(s => s.title === '手動の場面' && s.start_ms === 3600000));
+  assert.equal(x.scenes[0].start_ms, 0);
+  assert.throws(() => autoSplitReplay(db, id, { targetChars: 100 }), /targetChars/);
+});
+
+test('auto split is available through authenticated replay API', async () => {
+  const { db, id } = seed();
+  const srv = await serve(db);
+  try {
+    const r = await call(srv.url, '/meetings/' + id + '/auto-split', 'POST', { targetChars: 2000 });
+    assert.equal(r.response.status, 200);
+    assert.ok(Array.isArray(r.data.scenes));
+  } finally { await srv.close(); }
 });

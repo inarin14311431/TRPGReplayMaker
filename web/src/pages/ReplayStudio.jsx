@@ -127,6 +127,7 @@ function ReplayWorkspace({ id }) {
   const [page, setPage] = useState({ rows: [], total: 0 });
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(null);
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const [settings, setSettings] = useState({ title: '', systemName: '', style: 'hybrid', glossary: '' });
@@ -186,6 +187,26 @@ function ReplayWorkspace({ id }) {
     }, 'シーンを追加しました。');
   };
   const saveSettings = () => execute(() => api.updateReplayProject(id, { ...settings, revision: data.project.revision }), '設定を保存しました。');
+  const generateAll = async () => {
+    const ungenerated = data.scenes.filter(s => !s.draft_text?.trim());
+    if (!ungenerated.length) { setNote('すべてのシーンに原稿があります。'); return; }
+    if (!window.confirm(ungenerated.length + 'シーンを順番にAI生成します。API利用料が発生する場合があります。開始しますか？')) return;
+    setError(''); setNote(''); setWorking(true);
+    const failures = [];
+    let completed = 0;
+    setBulkProgress({ completed, total: ungenerated.length });
+    for (const s of ungenerated) {
+      try { await api.generateReplayScene(id, s.id, { overwrite: false }); }
+      catch (err) { failures.push(s.title + ': ' + err.message); }
+      completed += 1;
+      setBulkProgress({ completed, total: ungenerated.length });
+    }
+    try { await reload(); } catch (err) { failures.push('一覧の更新: ' + err.message); }
+    setWorking(false); setBulkProgress(null);
+    if (failures.length) setError('一部のシーンで生成に失敗しました。保存済みの原稿は残っています。' + '\n' + failures.join('\n'));
+    else setNote('全シーンのAI原稿生成が完了しました。');
+  };
+
   if (loading) return <Page><p className="text-muted">読み込み中…</p></Page>;
   if (!data) return <Page><p className="text-error">{error || 'セッションが見つかりません。'}</p></Page>;
 
@@ -240,6 +261,17 @@ function ReplayWorkspace({ id }) {
                 {!!s.draft_text && <span className="block text-[11px] text-primary">原稿あり</span>}
               </button>
             ))}
+          </div>
+          <div className="mt-3">
+            <button className={secondary} disabled={working} onClick={() => execute(async () => {
+              const result = await api.autoSplitReplay(id, 12000);
+              setNote(result.created.length + 'シーンの区切りを追加しました。');
+            }, '自動分割しました。')}>長いログを自動分割</button>
+            <p className="text-xs text-muted mt-1">文字量を基準に区切ります。内容に合わせてシーン名を編集できます。</p>
+          </div>
+          <div className="mt-3">
+            <button className={primary} disabled={working} onClick={generateAll}>未生成の全シーンをAI生成</button>
+            {bulkProgress && <p role="status" className="text-xs text-muted mt-2">AI処理 {bulkProgress.completed} / {bulkProgress.total} シーン</p>}
           </div>
           <div className="border-t border-border pt-3 mt-3 space-y-2">
             <input className={input} aria-label="シーン開始時刻" value={sceneTime} onChange={e => setSceneTime(e.target.value)} placeholder="HH:MM:SS" />

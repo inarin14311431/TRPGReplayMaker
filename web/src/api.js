@@ -74,6 +74,7 @@ export const api = {
   updateReplayProject: (id, patch) => fetch('/api/replays/meetings/' + id, jsonBody('PATCH', patch)).then(json),
   saveReplaySpeaker: (id, userId, patch) => fetch('/api/replays/meetings/' + id + '/speakers/' + encodeURIComponent(userId), jsonBody('PUT', patch)).then(json),
   createReplayScene: (id, data) => fetch('/api/replays/meetings/' + id + '/scenes', jsonBody('POST', data)).then(json),
+  autoSplitReplay: (id, targetChars = 12000) => fetch('/api/replays/meetings/' + id + '/auto-split', jsonBody('POST', { targetChars })).then(json),
   saveReplayScene: (id, sceneId, patch) => fetch('/api/replays/meetings/' + id + '/scenes/' + sceneId, jsonBody('PATCH', patch)).then(json),
   deleteReplayScene: (id, sceneId) => fetch('/api/replays/meetings/' + id + '/scenes/' + sceneId, { method: 'DELETE' }).then(json),
   saveReplayLine: (id, lineId, patch) => fetch('/api/replays/meetings/' + id + '/lines/' + lineId, jsonBody('PATCH', patch)).then(json),
