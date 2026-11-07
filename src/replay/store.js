@@ -239,7 +239,7 @@ export function autoSplitReplay(db, meetingId, { targetChars = 12000 } = {}) {
 }
 
 export function removeReplayForMeeting(db, id) {
-  for (const table of ['replay_line_edits','replay_scenes','replay_speakers','replay_projects']) {
+  for (const table of ['replay_line_edits','replay_scenes','replay_speakers','replay_projects','replay_ai_usage']) {
     db.sql.prepare('DELETE FROM ' + table + ' WHERE meeting_id=?').run(id);
   }
 }
