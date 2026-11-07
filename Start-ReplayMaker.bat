@@ -1,63 +1,95 @@
 @echo off
-setlocal
+setlocal EnableExtensions
 cd /d "%~dp0"
-title TRPGReplayMaker - Easy Start
-echo ==============================================
-echo   TRPGReplayMaker - Windows Quick Start
-echo ==============================================
+title TRPGReplayMaker - Portable Windows (no Docker)
+echo ===========================================
+echo   TRPGReplayMaker - Windows Portable
+echo ===========================================
 echo.
-where docker >nul 2>&1
+set "NODE_EXE="
+if exist "%~dp0runtime\node.exe" (
+  set "NODE_EXE=%~dp0runtime\node.exe"
+) else (
+  where node >nul 2>&1
+  if errorlevel 1 goto :missingNode
+  set "NODE_EXE=node"
+)
+"%NODE_EXE%" -e "process.exit(parseInt(process.versions.node,10)>=24?0:1)" >nul 2>&1
 if errorlevel 1 (
-  echo [ERROR] Docker Desktop is not installed.
-  echo Download: https://docs.docker.com/desktop/setup/install/windows-install/
-  echo After installation, open Docker Desktop and retry this file.
+  echo [ERROR] Node.js 24 or newer is required.
+  echo Download a Windows Portable ZIP from GitHub Releases, or install Node.js 24.
   pause
   exit /b 1
 )
-docker info >nul 2>&1
-if errorlevel 1 (
-  echo [ERROR] Docker Desktop is not running.
-  echo Start Docker Desktop, then double-click this file again.
-  pause
-  exit /b 1
+if not exist "node_modules\express\package.json" (
+  echo Installing application dependencies (first source checkout only)...
+  where npm >nul 2>&1
+  if errorlevel 1 goto :missingNpm
+  call npm ci --omit=dev
+  if errorlevel 1 goto :installError
 )
-docker compose version >nul 2>&1
-if errorlevel 1 (
-  echo [ERROR] Docker Compose is not available.
-  pause
-  exit /b 1
+if not exist "web\dist\index.html" (
+  echo Building browser dashboard (first source checkout only)...
+  where npm >nul 2>&1
+  if errorlevel 1 goto :missingNpm
+  call npm --prefix web ci
+  if errorlevel 1 goto :installError
+  call npm --prefix web run build
+  if errorlevel 1 goto :installError
 )
-if not exist ".env" (
-  if not exist ".env.example" (
-    echo [ERROR] Missing .env.example. Extract the entire ZIP first.
-    pause
-    exit /b 1
+set "DATA_DIR=%~dp0user-data"
+set "PARLEY_ENV_FILE=%DATA_DIR%\.env"
+set "TRPG_PORTABLE_MODE=1"
+set "WEB_UI_HOST=127.0.0.1"
+if not exist "%DATA_DIR%" mkdir "%DATA_DIR%"
+if errorlevel 1 goto :dataError
+if not exist "%PARLEY_ENV_FILE%" (
+  if exist ".env" (
+    copy /Y ".env" "%PARLEY_ENV_FILE%" >nul
+  ) else (
+    if not exist ".env.example" goto :dataError
+    copy /Y ".env.example" "%PARLEY_ENV_FILE%" >nul
   )
-  copy /Y ".env.example" ".env" >nul
-  if errorlevel 1 (
-    echo [ERROR] Could not create local .env config.
-    pause
-    exit /b 1
-  )
-  echo Created local configuration.
+  if errorlevel 1 goto :dataError
 )
 echo.
-echo Building and starting the local app...
-echo The first launch may download Docker images and Whisper models.
-docker compose up --build -d
-if errorlevel 1 (
-  echo.
-  echo [ERROR] Startup failed. Check Docker Desktop and the log above.
-  echo You can also run: docker compose logs --tail 80
-  pause
-  exit /b 1
-)
+echo Data: %DATA_DIR%
+echo Local dashboard: http://127.0.0.1:3000
 echo.
-echo Startup requested. Opening local dashboard...
-echo http://127.0.0.1:3000
+echo OpenAI transcription needs an API key and explicit setup under Settings.
+echo Optional local Whisper needs Python 3.11: Setup-Local-Whisper.bat
+echo.
+echo Keep this window open while recording.
+echo To stop, press Ctrl+C in this window.
+echo.
 start "" "http://127.0.0.1:3000"
+"%NODE_EXE%" "src\index.js"
+set "RESULT=%ERRORLEVEL%"
 echo.
-echo If the page is not ready, try refreshing it after the containers start.
-echo Local recordings remain on this PC in Docker volumes.
-echo To stop the app, run Stop-ReplayMaker.bat.
+echo TRPGReplayMaker exited (code %RESULT%).
+if not "%RESULT%"=="0" pause
+exit /b %RESULT%
+
+:missingNode
+echo [ERROR] Node.js was not found.
+echo Use the prebuilt Portable ZIP from GitHub Releases/Actions.
+echo Or install Node.js 24 and use this GitHub source archive.
 pause
+exit /b 1
+
+:missingNpm
+echo [ERROR] npm was not found. Source checkouts require Node.js with npm.
+echo The prebuilt Portable ZIP already contains the dependencies.
+pause
+exit /b 1
+
+:installError
+echo [ERROR] Could not install/build dependencies. Check Internet access and npm logs.
+pause
+exit /b 1
+
+:dataError
+echo [ERROR] Could not create the user-data directory or local settings.
+echo Unpack the ZIP to a writable folder, not Program Files.
+pause
+exit /b 1

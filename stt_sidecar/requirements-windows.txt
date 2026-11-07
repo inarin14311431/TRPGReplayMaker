@@ -1,0 +1,6 @@
+# Optional Windows CPU local speech recognition.
+# Do NOT install Linux-only nvidia-cublas-cu12/nvidia-cudnn-cu12 on Windows.
+faster-whisper>=1.1.0
+fastapi>=0.115.0
+uvicorn>=0.32.0
+python-multipart>=0.0.12
