@@ -76,13 +76,14 @@ Discordで遊んだ会話を録音して、リプレイをHTMLで保存するア
 
 ### B. API料金をかけない：PCで文字起こしする
 
-1. **[ここをクリックしてPythonのダウンロードページを開く](https://www.python.org/downloads/)**。
-2. **Python 3.11** をインストールします。
-3. TRPGReplayMakerを展開したフォルダーに戻ります。
-4. **Setup-Local-Whisper.bat** をダブルクリックします。インストール完了の案内が出るまで画面を閉じないでください。
-5. TRPGReplayMakerを一度終了して、**Start-ReplayMaker.bat** で再起動します。
-6. **Settings → Transcription → Provider** で **Local sidecar (faster-whisper)** を選びます。
-7. 文字起こし用の機能が停止している場合は、表示された **Start sidecar** をクリックします。
+1. **[ここをクリックしてPython 3.11のダウンロードページを開く](https://www.python.org/downloads/release/python-3119/)**。
+2. ページ下部の **Files** までスクロールし、**Windows installer (64-bit)** をクリックします。
+3. ダウンロードしたインストーラーを起動し、Pythonをインストールします。**Python Launcher** のインストールを有効にします。
+4. TRPGReplayMakerを展開したフォルダーに戻ります。
+5. **Setup-Local-Whisper.bat** をダブルクリックします。インストール完了の案内が出るまで画面を閉じないでください。
+6. TRPGReplayMakerを一度終了して、**Start-ReplayMaker.bat** で再起動します。
+7. **Settings → Transcription → Provider** で **Local sidecar (faster-whisper)** を選びます。
+8. 文字起こし用の機能が停止している場合は、表示された **Start sidecar** をクリックします。
 
 こちらは音声認識のAPI料金はかかりませんが、PCによっては文字起こしに長い時間がかかります。
 
