@@ -37,10 +37,8 @@ function fakeConnection() {
     receiver: {
       speaking,
       subscribe() {
-        const s = new EventEmitter();
-        s.pipe = () => s;            // opusStream.pipe(decoder).pipe(out)
-        s.destroy = () => {};
-        setImmediate(() => s.emit('end'));
+        const s = new PassThrough();
+        setImmediate(() => s.end()); // lets the real decoder and file drain
         return s;
       },
     },
