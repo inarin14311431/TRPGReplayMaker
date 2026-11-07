@@ -1,0 +1,35 @@
+{
+  "name": "parley",
+  "version": "2.0.0",
+  "description": "Self-hosted Discord bot: records meetings, transcribes per-speaker, posts AI meeting notes.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node --env-file=.env src/index.js",
+    "test": "node --env-file-if-exists=.env --test",
+    "sidecar": "stt_sidecar/.venv/bin/python stt_sidecar/server.py",
+    "make:art": "node scripts/make-brand-art.mjs",
+    "web": "node --env-file-if-exists=.env scripts/web-standalone.mjs",
+    "web:stt": "node --env-file-if-exists=.env scripts/web-standalone-stt.mjs",
+    "web:dev": "npm --prefix web run dev",
+    "web:build": "npm --prefix web install && npm --prefix web run build"
+  },
+  "license": "ISC",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "@discordjs/opus": "^0.10.0",
+    "@discordjs/voice": "^0.19.2",
+    "@google/generative-ai": "^0.24.1",
+    "discord.js": "^14.22.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "libsodium-wrappers": "^0.7.15",
+    "opusscript": "^0.0.8",
+    "prism-media": "^1.3.5"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
+  }
+}
