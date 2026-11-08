@@ -40,7 +40,7 @@ function TodoRow({ todo, onToggle, people }) {
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {people.length > 0 ? people.map((p) => (
             <span key={p} className="inline-flex items-center gap-1.5 chip"><Avatar name={p} size={15} />{p}</span>
-          )) : <span className="chip text-muted">Unassigned</span>}
+          )) : <span className="chip text-muted">担当者なし</span>}
           <span className="text-faint text-xs">·</span>
           <Link to={`/meetings/${todo.meeting_id}`} className="text-xs text-muted hover:text-primary no-underline inline-flex items-center gap-1">
             <Icon.Doc width={12} height={12} /> {fmtDateShort(todo.created_at)}
@@ -77,13 +77,13 @@ export default function ActionItems() {
     setLoading(true); setError(null);
     api.todos(guildId, showDone ? {} : { open: true })
       .then((rows) => { if (!stale) { setTodos(Array.isArray(rows) ? rows : []); setLoading(false); } })
-      .catch((e) => { if (!stale) { setError(e?.message || 'Failed to load'); setLoading(false); } });
+      .catch((e) => { if (!stale) { setError(e?.message || '読み込みに失敗しました'); setLoading(false); } });
     return () => { stale = true; };
   }, [guildId, showDone, version]);
 
   async function toggle(t) {
     try { await api.setTodoDone(t.id, !t.done); setVersion((v) => v + 1); setToggleErr(null); }
-    catch (e) { setToggleErr(e?.status === 403 ? 'Only admins can edit action items.' : (e?.message || 'Could not update')); }
+    catch (e) { setToggleErr(e?.status === 403 ? 'タスクを編集できるのは管理者だけです。' : (e?.message || '更新できませんでした')); }
   }
 
   const { canon, people, hasUnassigned } = useMemo(() => {
@@ -107,19 +107,19 @@ export default function ActionItems() {
     return peopleOf(t, canon).includes(person);
   }), [todos, person, canon]);
 
-  if (!guildId) return <Page><Empty icon={Icon.CheckSquare} title="No server selected" /></Page>;
+  if (!guildId) return <Page><Empty icon={Icon.CheckSquare} title="サーバーが選択されていません" /></Page>;
 
   const openCount = todos.filter((t) => !t.done).length;
 
   return (
     <Page max="900px">
       <PageHead
-        title="Action items"
-        subtitle={`${openCount} open across ${people.length} ${people.length === 1 ? 'person' : 'people'}`}
+        title="タスク"
+        subtitle={`未完了${openCount}件 · 担当者${people.length}人`}
         actions={
           <label className="flex items-center gap-2 text-sm text-muted cursor-pointer select-none">
             <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} className="pcheck h-4 w-4" />
-            Show completed
+            完了したタスクを表示
           </label>
         }
       />
@@ -130,7 +130,7 @@ export default function ActionItems() {
       )}
       <div className="flex items-center gap-2 mb-5 flex-wrap">
         <button onClick={() => setPerson(ALL)} className={`chip ${person === ALL ? '!bg-primary-soft !text-ink' : ''}`}>
-          Everyone <span className="text-faint">{todos.length}</span>
+          全員 <span className="text-faint">{todos.length}</span>
         </button>
         {people.map((p) => (
           <button key={p} onClick={() => setPerson(p)} className={`chip ${person === p ? '!bg-primary-soft !text-ink' : ''}`}>
@@ -138,14 +138,14 @@ export default function ActionItems() {
           </button>
         ))}
         {hasUnassigned && (
-          <button onClick={() => setPerson(null)} className={`chip ${person === null ? '!bg-primary-soft !text-ink' : ''}`}>Unassigned</button>
+          <button onClick={() => setPerson(null)} className={`chip ${person === null ? '!bg-primary-soft !text-ink' : ''}`}>担当者なし</button>
         )}
       </div>
 
       {loading ? <Skeleton />
-        : error ? <Empty icon={Icon.CheckSquare} title="Couldn't load action items" body={error} />
+        : error ? <Empty icon={Icon.CheckSquare} title="タスクを読み込めませんでした" body={error} />
         : visible.length === 0 ? (
-          <div className="card"><Empty icon={Icon.Check} title={showDone ? 'No action items' : 'All caught up'} body={showDone ? 'Action items appear here once meetings are summarized.' : 'No open tasks in this view.'} /></div>
+          <div className="card"><Empty icon={Icon.Check} title={showDone ? 'タスクがありません' : 'すべて完了しました'} body={showDone ? '録音を要約すると、タスクがここに表示されます。' : '未完了のタスクはありません。'} /></div>
         ) : (
           <ul className="card p-1 divide-y divide-border">
             {visible.map((t) => <TodoRow key={t.id} todo={t} onToggle={toggle} people={peopleOf(t, canon)} />)}

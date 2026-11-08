@@ -65,12 +65,12 @@ export default function Dashboard() {
       setMeetings((Array.isArray(m) ? m : []).filter((x) => (x.utterance_count ?? 1) > 0));
       setAgg(a);
       setTodos(Array.isArray(t) ? t : []);
-    }).catch((e) => { if (!stale) setError(e?.message || 'Failed to load'); });
+    }).catch((e) => { if (!stale) setError(e?.message || '読み込みに失敗しました'); });
     return () => { stale = true; };
   }, [guildId]);
 
   if (!guildId) return <GettingStarted />;
-  if (error) return <Page><Empty icon={Icon.Home} title="Couldn't load dashboard" body={error} /></Page>;
+  if (error) return <Page><Empty icon={Icon.Home} title="ホーム画面を読み込めませんでした" body={error} /></Page>;
   if (!meetings || !agg) return <StatSkeleton />;
 
   const { stats, leaderboard, timeline } = agg;
@@ -83,9 +83,9 @@ export default function Dashboard() {
   return (
     <Page>
       <PageHead
-        title="Dashboard"
-        subtitle={`${stats.totalMeetings} meetings · ${stats.people} people · ${fmtCompact(stats.totalUtterances)} utterances captured`}
-        actions={<Link to="/meetings" className="btn btn-ghost">All meetings <Icon.Arrow width={15} height={15} /></Link>}
+        title="ホーム"
+        subtitle={`${stats.totalMeetings} meetings · ${stats.people} people · 発言 ${fmtCompact(stats.totalUtterances)}件 captured`}
+        actions={<Link to="/meetings" className="btn btn-ghost">録音をすべて見る <Icon.Arrow width={15} height={15} /></Link>}
       />
 
       <div className="card p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -107,24 +107,24 @@ export default function Dashboard() {
 
       {/* Stat row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={Icon.Meetings} label="Meetings recorded" value={stats.totalMeetings} sub={`${stats.doneMeetings} summarized`} tint="var(--primary)" />
-        <StatCard icon={Icon.Clock} label="Total talk time" value={fmtHours(stats.totalTalkMs)} sub={`${fmtCompact(stats.totalUtterances)} utterances`} tint="#5BC0EB" />
-        <StatCard icon={Icon.CheckSquare} label="Open action items" value={stats.todos.open} sub={`${stats.todos.done} completed`} tint="var(--accent)" />
-        <StatCard icon={Icon.Users} label="People" value={stats.people} sub="across all meetings" tint="#C77DFF" />
+        <StatCard icon={Icon.Meetings} label="録音数" value={stats.totalMeetings} sub={`要約済み${stats.doneMeetings}件`} tint="var(--primary)" />
+        <StatCard icon={Icon.Clock} label="総発言時間" value={fmtHours(stats.totalTalkMs)} sub={`発言 ${fmtCompact(stats.totalUtterances)}件`} tint="#5BC0EB" />
+        <StatCard icon={Icon.CheckSquare} label="未完了のタスク" value={stats.todos.open} sub={`完了${stats.todos.done}件`} tint="var(--accent)" />
+        <StatCard icon={Icon.Users} label="参加者" value={stats.people} sub="全録音の合計" tint="#C77DFF" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: recent meetings + activity */}
         <div className="lg:col-span-2 space-y-6">
           <div className="card p-5">
-            <SectionHead title="Activity" action={<span className="text-xs text-muted">last 30 days</span>} />
+            <SectionHead title="録音の推移" action={<span className="text-xs text-muted">過去30日</span>} />
             <Sparkline data={timeline} height={96} />
           </div>
 
           <div>
-            <SectionHead title="Recent meetings" action={<Link to="/meetings" className="text-xs text-primary font-medium hover:underline">View all</Link>} />
+            <SectionHead title="最近の録音" action={<Link to="/meetings" className="text-xs text-primary font-medium hover:underline">すべて見る</Link>} />
             {recent.length === 0 ? (
-              <div className="card"><Empty icon={Icon.Meetings} title="No meetings yet" body="Recorded meetings will appear here once Parley captures a session." /></div>
+              <div className="card"><Empty icon={Icon.Meetings} title="録音はまだありません" body="録音すると、ここに表示されます。" /></div>
             ) : (
               <div className="grid sm:grid-cols-2 gap-4">
                 {recent.map((m) => <MeetingCard key={m.id} m={m} />)}
@@ -136,14 +136,14 @@ export default function Dashboard() {
         {/* Right: leaderboard + open items */}
         <div className="space-y-6">
           <div className="card p-5">
-            <SectionHead title="Top speakers" action={<Link to="/analytics" className="text-xs text-primary font-medium hover:underline">Analytics</Link>} />
-            {lbRows.length === 0 ? <p className="text-sm text-muted py-4">No talk-time data yet.</p> : <RankBars rows={lbRows} />}
+            <SectionHead title="発言時間の上位" action={<Link to="/analytics" className="text-xs text-primary font-medium hover:underline">集計</Link>} />
+            {lbRows.length === 0 ? <p className="text-sm text-muted py-4">発言時間のデータがありません。</p> : <RankBars rows={lbRows} />}
           </div>
 
           <div className="card p-5">
-            <SectionHead title="Open action items" action={<Link to="/action-items" className="text-xs text-primary font-medium hover:underline">All</Link>} />
+            <SectionHead title="未完了のタスク" action={<Link to="/action-items" className="text-xs text-primary font-medium hover:underline">すべて</Link>} />
             {openTodos.length === 0 ? (
-              <p className="text-sm text-muted py-4">All caught up. No open tasks.</p>
+              <p className="text-sm text-muted py-4">未完了のタスクはありません。</p>
             ) : (
               <ul className="space-y-2.5">
                 {openTodos.map((t) => (

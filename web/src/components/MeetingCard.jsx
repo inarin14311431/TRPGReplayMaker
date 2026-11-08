@@ -28,7 +28,7 @@ export function MeetingCard({ m }) {
       {m.tldr ? (
         <p className="text-[13.5px] text-ink-2 leading-relaxed mt-3 line-clamp-2">{m.tldr}</p>
       ) : (
-        <p className="text-[13.5px] text-muted italic mt-3">No summary yet</p>
+        <p className="text-[13.5px] text-muted italic mt-3">要約はまだありません</p>
       )}
 
       {m.talktime?.length > 0 && (
@@ -41,12 +41,12 @@ export function MeetingCard({ m }) {
         <AvatarStack names={m.attendee_names || []} size={24} max={4} />
         <div className="flex items-center gap-3 text-xs text-muted">
           {m.action_count > 0 && (
-            <span className="inline-flex items-center gap-1" title="Action items">
+            <span className="inline-flex items-center gap-1" title="タスク">
               <Icon.CheckSquare width={13} height={13} />
               {m.open_action_count}/{m.action_count}
             </span>
           )}
-          <span className="inline-flex items-center gap-1" title="Utterances">
+          <span className="inline-flex items-center gap-1" title="発言">
             <Icon.Mic width={13} height={13} />
             {m.utterance_count}
           </span>

@@ -46,7 +46,7 @@ export function Logo({ size = 32, rounded = true, className = '' }) {
   // Waveform bars (brand blue) condensing into a single note dash (brand green),
   // matching assets/logo.svg. viewBox is the 512 brand canvas.
   return (
-    <svg width={size} height={size} viewBox="0 0 512 512" className={className} role="img" aria-label="Parley">
+    <svg width={size} height={size} viewBox="0 0 512 512" className={className} role="img" aria-label="TRPGReplayMaker">
       {rounded && <rect x="6" y="6" width="500" height="500" rx="110" fill="#0A0B0F" />}
       <g stroke="#5865F2" strokeWidth="14" strokeLinecap="round">
         <line x1="140" y1="216" x2="140" y2="296" />
@@ -112,9 +112,9 @@ export function StatusPill({ status }) {
     done: { label: 'Done', color: 'var(--accent)', bg: 'var(--accent-soft)' },
     recording: { label: 'Recording', color: 'var(--error)', bg: 'var(--error-soft)' },
     processing: { label: 'Processing', color: 'var(--warn)', bg: 'var(--warn-soft)' },
-    partial: { label: 'Partial transcript', color: 'var(--warn)', bg: 'var(--warn-soft)' },
-    transcription_failed: { label: 'Transcription failed', color: 'var(--error)', bg: 'var(--error-soft)' },
-    summary_failed: { label: 'Summary failed', color: 'var(--error)', bg: 'var(--error-soft)' },
+    partial: { label: '一部のみ文字起こし済み', color: 'var(--warn)', bg: 'var(--warn-soft)' },
+    transcription_failed: { label: '文字起こしに失敗', color: 'var(--error)', bg: 'var(--error-soft)' },
+    summary_failed: { label: '要約に失敗', color: 'var(--error)', bg: 'var(--error-soft)' },
   };
   const s = map[status] || { label: status || 'Unknown', color: 'var(--muted)', bg: 'var(--surface-3)' };
   return (

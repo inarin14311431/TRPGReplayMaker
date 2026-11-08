@@ -112,7 +112,7 @@ export function ConnectionForm({ conn, onSaved, submitLabel = 'Save & connect' }
       </div>
       <details className="text-xs text-muted">
         <summary className="cursor-pointer">詳細設定：文字起こしサーバーURL（通常は変更不要）</summary>
-      <Labeled label="STT sidecar URL" hint="Where the local faster-whisper sidecar listens. In Docker this is set for you.">
+      <Labeled label="ローカル文字起こしの接続先URL" hint="ローカルのfaster-whisperに接続するURLです。Docker版では自動で設定されます。">
         <input className="input" value={sttUrl} onChange={(e) => setSttUrl(e.target.value)}
           placeholder="http://127.0.0.1:8000" autoComplete="off" />
       </Labeled>
@@ -128,10 +128,10 @@ export function ConnectionForm({ conn, onSaved, submitLabel = 'Save & connect' }
 /** A compact live badge for the bot connection state. */
 export function BotStatusBadge({ bot }) {
   const map = {
-    ready: { label: 'Connected', color: 'var(--accent)', bg: 'var(--accent-soft)' },
-    starting: { label: 'Connecting…', color: 'var(--warn)', bg: 'var(--warn-soft)' },
-    error: { label: 'Error', color: 'var(--error)', bg: 'var(--error-soft)' },
-    stopped: { label: 'Not connected', color: 'var(--muted)', bg: 'var(--surface-3)' },
+    ready: { label: '接続済み', color: 'var(--accent)', bg: 'var(--accent-soft)' },
+    starting: { label: '接続中…', color: 'var(--warn)', bg: 'var(--warn-soft)' },
+    error: { label: 'エラー', color: 'var(--error)', bg: 'var(--error-soft)' },
+    stopped: { label: '未接続', color: 'var(--muted)', bg: 'var(--surface-3)' },
   };
   const s = map[bot?.state] || map.stopped;
   return (

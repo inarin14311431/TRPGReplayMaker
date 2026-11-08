@@ -1,6 +1,6 @@
 // Optional hook the app installs so a 401 anywhere (an expired/cleared session)
 // can drop the UI back to the login screen instead of surfacing a raw
-// "Not authenticated" error string on whatever page the user was on.
+// "ログインが必要です" error string on whatever page the user was on.
 let onUnauthorized = null;
 export function setUnauthorizedHandler(fn) { onUnauthorized = fn; }
 
@@ -8,7 +8,7 @@ const json = async (r) => {
   // Surface auth failures distinctly so the app can redirect to /login.
   if (r.status === 401) {
     if (onUnauthorized) { try { onUnauthorized(); } catch { /* ignore */ } }
-    const err = new Error('Not authenticated');
+    const err = new Error('ログインが必要です');
     err.status = 401;
     return Promise.reject(err);
   }
@@ -16,7 +16,7 @@ const json = async (r) => {
     // Try to read a JSON {error}, but fall back cleanly when the body is HTML
     // (e.g. an older server's 404 page) so callers never see a raw
     // "JSON.parse: unexpected character" error.
-    let message = r.statusText || `Request failed (${r.status})`;
+    let message = `操作に失敗しました（HTTP ${r.status}）`;
     try { const body = await r.json(); if (body?.error) message = body.error; } catch { /* non-JSON body */ }
     const err = new Error(message);
     err.status = r.status;

@@ -8,9 +8,9 @@ import { ModelPicker } from '../components/ModelPicker.jsx';
 import { ConnectionForm, BotStatusBadge } from '../components/Connection.jsx';
 
 const WHISPER = ['tiny', 'base', 'small', 'medium', 'large-v3', 'large-v3-turbo'];
-const LANGS = [['auto', 'Auto-detect'], ['en', 'English'], ['de', 'German'], ['es', 'Spanish'], ['fr', 'French'],
-  ['it', 'Italian'], ['pt', 'Portuguese'], ['nl', 'Dutch'], ['ru', 'Russian'], ['ja', 'Japanese'], ['zh', 'Chinese']];
-const SUMMARY_LANGS = [['match', 'Match transcription'], ...LANGS.filter(([c]) => c !== 'auto')];
+const LANGS = [['auto', '自動検出'], ['en', '英語'], ['de', 'ドイツ語'], ['es', 'スペイン語'], ['fr', 'フランス語'],
+  ['it', 'イタリア語'], ['pt', 'ポルトガル語'], ['nl', 'オランダ語'], ['ru', 'ロシア語'], ['ja', '日本語'], ['zh', '中国語']];
+const SUMMARY_LANGS = [['match', '文字起こしと同じ言語'], ...LANGS.filter(([c]) => c !== 'auto')];
 
 // Model defaults come from the server (adapters/summarizer/models.js) so the
 // dashboard, /setup and the adapters can't drift apart.
@@ -28,8 +28,8 @@ const KEY_HELP = {
 // Which env secret each STT provider needs (sidecar is keyless/local).
 const STT_KEY = { openai: 'openai' };
 const STT_HELP = {
-  sidecar: 'Local faster-whisper (free API, CPU/GPU). In a portable Windows ZIP, install optional Python 3.11 via Setup-Local-Whisper.bat. In Docker, it runs as a container.',
-  openai: 'Cloud transcription with your OpenAI API key (usage-based charges). Explicitly select this option to enable API billing.',
+  sidecar: 'PC上のfaster-whisperで文字起こしします。API料金はかかりません。WindowsのZIP版ではPython 3.11を入れ、Setup-Local-Whisper.batを実行してください。Docker版ではコンテナで動作します。',
+  openai: 'OpenAIのAPIキーを使って文字起こしします。この項目を選んで利用すると、使用量に応じて料金がかかります。',
 };
 // The provider's model catalog, fetched live (and re-fetchable with refresh,
 // which bypasses the server's cache). `seq` drops responses that land after the
@@ -87,15 +87,15 @@ function PromptEditor({ value, defaultValue, onSave }) {
   }
 
   return (
-    <Field label="Summary prompt" hint="Instructions sent to the summarizer before the meeting details and transcript. Keep the JSON output shape if you want structured notes and todos.">
-      <textarea className="input min-h-64 font-mono text-xs resize-y" aria-label="Summary prompt"
+    <Field label="要約の指示文" hint="AIに録音情報と文字起こしを渡す前に送る指示です。ノートやタスクを表示するには、指定のJSON形式を維持してください。">
+      <textarea className="input min-h-64 font-mono text-xs resize-y" aria-label="要約の指示文"
         value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={20000} />
       <div className="flex flex-wrap gap-2 mt-2">
         <button type="button" className="btn btn-primary" disabled={busy || !changed || !draft.trim()}
-          onClick={() => savePrompt(draft.trim())}>Save prompt</button>
+          onClick={() => savePrompt(draft.trim())}>指示文を保存</button>
         <button type="button" className="btn btn-ghost" disabled={busy || value == null}
-          onClick={() => savePrompt(null)}>Restore default</button>
-        {changed && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setDraft(current)}>Discard changes</button>}
+          onClick={() => savePrompt(null)}>初期設定に戻す</button>
+        {changed && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setDraft(current)}>変更を破棄</button>}
       </div>
     </Field>
   );
@@ -135,27 +135,27 @@ function KeyEditor({ provider, present, onChanged, autoEdit = false }) {
   async function save() {
     setBusy(true); setErr(null);
     try { await api.setProviderKey(provider, value.trim()); setValue(''); setEditing(false); onChanged?.(); }
-    catch (e) { setErr(e?.message || 'Failed to save key'); }
+    catch (e) { setErr(e?.message || 'APIキーを保存できませんでした'); }
     finally { setBusy(false); }
   }
   async function clear() {
-    if (!window.confirm(`Remove the ${provider} API key from .env?`)) return;
+    if (!window.confirm(`${provider}のAPIキーを削除しますか？`)) return;
     setBusy(true); setErr(null);
     try { await api.setProviderKey(provider, ''); setValue(''); setEditing(false); onChanged?.(); }
-    catch (e) { setErr(e?.message || 'Failed to clear key'); }
+    catch (e) { setErr(e?.message || 'APIキーを削除できませんでした'); }
     finally { setBusy(false); }
   }
 
   return (
-    <Field label="API key" hint={err ? undefined : <>Stored in <code className="text-ink-2">.env</code> as <code className="text-ink-2">{envVar}</code> · get one at {KEY_HELP[provider]}</>}>
+    <Field label="APIキー" hint={err ? undefined : <><code className="text-ink-2">.env</code>に<code className="text-ink-2">{envVar}</code>として保存します。取得先 {KEY_HELP[provider]}</>}>
       {!editing ? (
         <div className="flex items-center gap-2">
           <span className={`inline-flex items-center gap-1.5 text-[13px] font-medium px-2.5 py-1.5 rounded-sm ${present ? 'text-accent bg-accent-soft' : 'text-warn bg-warn-soft'}`}>
             <span style={{ width: 6, height: 6, borderRadius: 6, background: 'currentColor' }} />
-            {present ? 'Key set' : 'No key'}
+            {present ? '登録済み' : '未登録'}
           </span>
-          <button onClick={() => setEditing(true)} className="btn btn-ghost !py-1.5">{present ? 'Replace' : 'Add key'}</button>
-          {present && <button onClick={clear} disabled={busy} className="btn btn-ghost !py-1.5 !text-error">Remove</button>}
+          <button onClick={() => setEditing(true)} className="btn btn-ghost !py-1.5">{present ? '変更' : 'APIキーを登録'}</button>
+          {present && <button onClick={clear} disabled={busy} className="btn btn-ghost !py-1.5 !text-error">削除</button>}
         </div>
       ) : (
         <div className="flex items-center gap-2">
@@ -168,8 +168,8 @@ function KeyEditor({ provider, present, onChanged, autoEdit = false }) {
             <button type="button" onClick={() => setReveal((r) => !r)}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink text-xs">{reveal ? 'Hide' : 'Show'}</button>
           </div>
-          <button onClick={save} disabled={!value.trim() || busy} className="btn btn-primary !py-2">{busy ? 'Saving…' : 'Save'}</button>
-          <button onClick={() => { setEditing(false); setValue(''); }} disabled={busy} className="btn btn-ghost !py-2">Cancel</button>
+          <button onClick={save} disabled={!value.trim() || busy} className="btn btn-primary !py-2">{busy ? '保存中…' : '保存'}</button>
+          <button onClick={() => { setEditing(false); setValue(''); }} disabled={busy} className="btn btn-ghost !py-2">キャンセル</button>
         </div>
       )}
       {err && <p className="text-xs text-error mt-1.5">{err}</p>}
@@ -189,10 +189,10 @@ function SidecarControl({ sys, onChanged }) {
   if (!sc) return null; // standalone web server with no controller attached
 
   const map = {
-    running: { label: 'Running', color: 'var(--accent)', bg: 'var(--accent-soft)' },
-    starting: { label: 'Starting…', color: 'var(--warn)', bg: 'var(--warn-soft)' },
-    error: { label: 'Stopped', color: 'var(--error)', bg: 'var(--error-soft)' },
-    stopped: { label: 'Stopped', color: 'var(--muted)', bg: 'var(--surface-3)' },
+    running: { label: '動作中', color: 'var(--accent)', bg: 'var(--accent-soft)' },
+    starting: { label: '起動中…', color: 'var(--warn)', bg: 'var(--warn-soft)' },
+    error: { label: '停止中', color: 'var(--error)', bg: 'var(--error-soft)' },
+    stopped: { label: '停止中', color: 'var(--muted)', bg: 'var(--surface-3)' },
   };
   const s = map[sc.state] || map.stopped;
   const running = sc.state === 'running';
@@ -207,9 +207,9 @@ function SidecarControl({ sys, onChanged }) {
   if (!sc.managed) {
     return (
       <div className="rounded-md bg-surface-2 px-3.5 py-3 text-xs text-muted">
-        The local whisper sidecar is managed outside this process
-        {sc.url ? <> (<code className="text-ink-2">{sc.url}</code>)</> : null}. In Docker it runs as its
-        own container and starts/stops with <code className="text-ink-2">docker compose</code>.
+        ローカルのWhisperは別のプロセスで動作しています
+        {sc.url ? <> (<code className="text-ink-2">{sc.url}</code>)</> : null}. Docker版では別のコンテナで動作し、
+        起動・停止には <code className="text-ink-2">docker compose</code>を使います。
       </div>
     );
   }
@@ -218,30 +218,30 @@ function SidecarControl({ sys, onChanged }) {
     <div className="rounded-md border border-border px-3.5 py-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[13px] font-medium text-ink">Local sidecar</span>
+          <span className="text-[13px] font-medium text-ink">ローカル文字起こし</span>
           <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: s.color, background: s.bg }}>
             <span style={{ width: 6, height: 6, borderRadius: 6, background: s.color }} />
-            {s.label}{sc.external ? ' · external' : ''}
+            {s.label}{sc.external ? ' · 外部で管理' : ''}
           </span>
           {running && sc.device && <DeviceBadge device={sc.device} model={sc.model} batchSize={sc.batchSize} />}
         </div>
         <div className="flex items-center gap-2">
           {running
-            ? <button onClick={() => act('stop')} disabled={busy} className="btn btn-ghost !py-1.5">{busy ? '…' : 'Stop'}</button>
-            : <button onClick={() => act('start')} disabled={busy} className="btn btn-primary !py-1.5">{busy ? 'Starting…' : 'Start sidecar'}</button>}
-          {running && <button onClick={() => act('restart')} disabled={busy} className="btn btn-ghost !py-1.5">Restart</button>}
+            ? <button onClick={() => act('stop')} disabled={busy} className="btn btn-ghost !py-1.5">{busy ? '…' : '停止'}</button>
+            : <button onClick={() => act('start')} disabled={busy} className="btn btn-primary !py-1.5">{busy ? '起動中…' : '文字起こし機能を起動'}</button>}
+          {running && <button onClick={() => act('restart')} disabled={busy} className="btn btn-ghost !py-1.5">再起動</button>}
         </div>
       </div>
       <p className="text-xs text-muted mt-2">
         {running
-          ? 'Transcribing locally on this machine. Turn it off to free CPU/RAM when using a cloud API.'
-          : 'Off. Start it to transcribe locally without a cloud API.'}
+          ? 'このPCで文字起こししています。クラウドAPIを使う場合は、停止するとCPUとメモリの消費を抑えられます。'
+          : '停止中です。このPCで文字起こしするには起動してください。'}
       </p>
       {running && sc.device === 'cpu' && (
         <p className="text-xs mt-2 rounded-sm px-2.5 py-2" style={{ color: 'var(--warn)', background: 'var(--warn-soft)' }}>
-          ⚠ Running on <b>CPU</b> — transcription is roughly 7x slower than GPU and is the usual cause of
-          lag on longer meetings. If this machine has an NVIDIA GPU, install the CUDA libraries so the
-          sidecar can use it (see the README GPU section).
+          ⚠ <b>CPU</b>で文字起こししています。長時間の録音では処理に時間がかかります。
+          NVIDIA GPUを使うためのCUDAの設定は、
+          READMEのGPUの項目を参照してください。
         </p>
       )}
       {(err || sc.error) && <p className="text-xs text-error mt-1.5">{err || sc.error}</p>}
@@ -274,7 +274,7 @@ function ConnectionCard({ sys, onChanged }) {
   const conn = sys?.connection;
   if (!sys?.managed) {
     return (
-      <Card title="Connection" desc="Discord bot connection.">
+      <Card title="Discordとの接続" desc="Discord Botの接続設定です。">
         <p className="text-sm text-muted">
           This dashboard is running in read-only mode (no bot process attached), so the Discord
           connection is managed elsewhere. Start Parley with <code className="text-ink-2">npm start</code> to
@@ -290,21 +290,21 @@ function ConnectionCard({ sys, onChanged }) {
     finally { setRestarting(false); }
   }
   return (
-    <Card title="Connection" desc="Your Discord bot. Changes reconnect instantly.">
+    <Card title="Discordとの接続" desc="Discord Botの接続設定です。保存すると再接続します。">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {bot && <BotStatusBadge bot={bot} />}
           {bot?.guildCount > 0 && <span className="text-xs text-muted">{bot.guildCount} server{bot.guildCount === 1 ? '' : 's'}</span>}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={restart} disabled={restarting} className="btn btn-ghost !py-1.5">{restarting ? 'Reconnecting…' : 'Reconnect'}</button>
-          <button onClick={() => setOpen((o) => !o)} className="btn btn-ghost !py-1.5">{open ? 'Close' : 'Edit credentials'}</button>
+          <button onClick={restart} disabled={restarting} className="btn btn-ghost !py-1.5">{restarting ? 'Reconnecting…' : '再接続'}</button>
+          <button onClick={() => setOpen((o) => !o)} className="btn btn-ghost !py-1.5">{open ? '閉じる' : '接続情報を編集'}</button>
         </div>
       </div>
-      {bot?.state === 'error' && bot?.error && <p className="text-xs text-error mt-2">{bot.error}</p>}
+      {bot?.state === 'error' && bot?.error && <p className="text-xs text-error mt-2">{(bot.error === 'An invalid token was provided.' ? 'Botトークンが無効です。接続情報を編集し、DiscordのBotトークンを確認してください。' : bot.error)}</p>}
       {open && (
         <div className="mt-4 pt-4 border-t border-border">
-          <ConnectionForm conn={conn} submitLabel="Save & reconnect" onSaved={async () => { setOpen(false); await onChanged?.(); }} />
+          <ConnectionForm conn={conn} submitLabel="保存して再接続" onSaved={async () => { setOpen(false); await onChanged?.(); }} />
         </div>
       )}
     </Card>
@@ -332,9 +332,9 @@ export default function Setup() {
 
   if (!guildId) return (
     <Page max="720px">
-      <PageHead title="Settings" subtitle="Discord connection and per-server configuration." />
+      <PageHead title="設定" subtitle="Discordとの接続とサーバーごとの設定を管理します。" />
       <ConnectionCard sys={sys} onChanged={refreshSys} />
-      <div className="mt-5"><Empty icon={Icon.Settings} title="No server selected" body="Pick a server from the top bar to configure summarizer, transcription, and delivery." /></div>
+      <div className="mt-5"><Empty icon={Icon.Settings} title="サーバーが選択されていません" body="画面上部でサーバーを選ぶと、要約や文字起こし、投稿先を設定できます。" /></div>
     </Page>
   );
   if (!data) return (
@@ -406,15 +406,15 @@ export default function Setup() {
   return (
     <Page max="720px">
       <PageHead
-        title="Settings"
-        subtitle="Per-server configuration. Applied instantly, no restart."
+        title="設定"
+        subtitle="サーバーごとの設定です。保存するとすぐに反映されます。"
         actions={msg && <span className={`text-sm font-medium ${msgErr ? 'text-error' : 'text-accent'}`}>{msg}</span>}
       />
 
       <div className="space-y-5">
         <ConnectionCard sys={sys} onChanged={refreshSys} />
-        <Card title="Summarizer" desc="Which AI turns transcripts into structured notes.">
-          <Field label="Provider" hint={sumDraft ? 'Add the API key below to switch to this provider.' : undefined}>
+        <Card title="要約" desc="文字起こしからノートを作るAIを選びます。">
+          <Field label="提供元" hint={sumDraft ? 'この提供元を使うには、下にAPIキーを登録してください。' : undefined}>
             <div className="relative">
               <select className={sel} value={sumProvider}
                 onChange={(e) => pickSummarizer(e.target.value)}>
@@ -431,7 +431,7 @@ export default function Setup() {
           {sumKeyed && <KeyEditor provider={sumProvider} present={!!secrets[sumProvider]} onChanged={commitSumKey} autoEdit={!!sumDraft} />}
 
           {!sumDraft && (
-          <Field label="Model" hint="Type to search the provider's catalog. Any id it supports also works — press Enter to use what you typed.">
+          <Field label="モデル" hint="入力するとモデルを検索できます。モデルIDを直接入力してEnterで確定することもできます。">
             <ModelPicker value={c.summarizerModel} catalog={models.catalog} loading={models.loading}
               onRefresh={models.reload}
               onPick={(id) => save({ provider: c.summarizerProvider, model: id })} />
@@ -441,7 +441,7 @@ export default function Setup() {
           {/* Only providers with a working key are offered: validateSetup rejects
               a keyless fallback server-side, so listing them would just error. */}
           {!sumDraft && (
-          <Field label="Fallback" hint="Tried only if the primary fails (quota cap, outage, region block). Choose none to disable.">
+          <Field label="予備の提供元" hint="利用上限や障害などで通常の提供元が使えない場合に使います。使わない場合は「なし」を選びます。">
             <div className="relative">
               <select className={sel} value={c.summarizerFallbackProvider || 'none'}
                 onChange={(e) => save({ fallbackProvider: e.target.value })}>
@@ -464,8 +464,8 @@ export default function Setup() {
           <PromptEditor key={guildId} value={c.summaryPrompt} defaultValue={defaultSummaryPrompt} onSave={save} />
         </Card>
 
-        <Card title="Transcription" desc="How spoken audio becomes text.">
-          <Field label="Provider" hint={sttDraft ? 'Add the API key below to switch to this provider.' : (STT_HELP[sttProvider] || '')}>
+        <Card title="文字起こし" desc="音声を文字に変換する方法を選びます。">
+          <Field label="提供元" hint={sttDraft ? 'この提供元を使うには、下にAPIキーを登録してください。' : (STT_HELP[sttProvider] || '')}>
             <div className="relative">
               <select className={sel} value={sttProvider}
                 onChange={(e) => pickStt(e.target.value)}>
@@ -485,7 +485,7 @@ export default function Setup() {
 
           {sttDraft ? null : c.sttProvider === 'sidecar' ? (
             <>
-              <Field label="Whisper model" hint="Larger is more accurate but slower on CPU.">
+              <Field label="Whisperモデル" hint="大きいモデルほど認識精度が上がりますが、CPUでの処理に時間がかかります。">
                 <div className="relative">
                   <select className={sel} value={c.whisperModel} onChange={(e) => save({ whisperModel: e.target.value })}>
                     {WHISPER.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -497,7 +497,7 @@ export default function Setup() {
             </>
           ) : (
             <>
-              <Field label="Model" hint="Cloud transcription model.">
+              <Field label="モデル" hint="クラウドで文字起こしに使うモデルです。">
                 <div className="relative">
                   <select className={sel} value={c.sttModel || (sttModels[0] ?? '')} onChange={(e) => save({ sttModel: e.target.value })}>
                     {sttModels.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -511,7 +511,7 @@ export default function Setup() {
             </>
           )}
 
-          <Field label="Spoken language">
+          <Field label="録音の言語">
             <div className="relative">
               <select className={sel} value={c.language} onChange={(e) => save({ language: e.target.value })}>
                 {LANGS.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
@@ -521,8 +521,8 @@ export default function Setup() {
           </Field>
         </Card>
 
-        <Card title="Delivery" desc="Where and how notes are posted in Discord.">
-          <Field label="Notes channel">
+        <Card title="ノートの投稿" desc="Discordへの投稿先と投稿方法を選びます。">
+          <Field label="ノートの投稿先">
             <div className="relative">
               <select className={sel} value={c.notesChannelId || ''} onChange={(e) => save({ notesChannelId: e.target.value || null })}>
                 <option value="">(meeting's own channel)</option>
@@ -531,7 +531,7 @@ export default function Setup() {
               <Chevron />
             </div>
           </Field>
-          <Field label="Summary language">
+          <Field label="要約の言語">
             <div className="relative">
               <select className={sel} value={c.summaryLanguage} onChange={(e) => save({ summary_language: e.target.value })}>
                 {SUMMARY_LANGS.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
@@ -540,12 +540,12 @@ export default function Setup() {
             </div>
           </Field>
           <Switch checked={c.useThread} onChange={(e) => save({ useThread: e.target.checked })}
-            label="Post notes in a thread" desc="Keeps the channel tidy by threading each meeting's notes." />
+            label="ノートをスレッドに投稿" desc="録音ごとにノートをスレッドにまとめます。" />
         </Card>
 
-        <Card title="Behavior">
+        <Card title="Botの動作">
           <Switch checked={c.autoJoin} onChange={(e) => save({ autoJoin: e.target.checked })}
-            label="Auto-join voice" desc="Join automatically when two or more people are in a voice channel." />
+            label="ボイスチャンネルに自動参加" desc="ボイスチャンネルに2人以上いるとBotが自動で参加します。" />
         </Card>
       </div>
     </Page>

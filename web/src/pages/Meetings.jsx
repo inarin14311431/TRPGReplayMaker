@@ -44,7 +44,7 @@ export default function Meetings() {
     setMeetings(null); setError(null); setChannel('__all__');
     api.meetings(guildId)
       .then((rows) => { if (!stale) setMeetings((Array.isArray(rows) ? rows : []).filter((m) => (m.utterance_count ?? 1) > 0 || m.failed)); })
-      .catch((e) => { if (!stale) setError(e?.message || 'Failed to load'); });
+      .catch((e) => { if (!stale) setError(e?.message || '読み込みに失敗しました'); });
     return () => { stale = true; };
   }, [guildId]);
 
@@ -69,20 +69,20 @@ export default function Meetings() {
     return BUCKET_ORDER.filter((b) => by.has(b)).map((b) => [b, by.get(b)]);
   }, [filtered]);
 
-  if (!guildId) return <Page><Empty icon={Icon.Meetings} title="No server selected" /></Page>;
+  if (!guildId) return <Page><Empty icon={Icon.Meetings} title="サーバーが選択されていません" /></Page>;
 
   return (
     <Page>
       <PageHead
-        title="Meetings"
+        title="録音一覧"
         subtitle={meetings ? `${filtered.length} meeting${filtered.length === 1 ? '' : 's'}` : 'Loading…'}
         actions={
           <Toggle
             value={view}
             onChange={setView}
             options={[
-              { value: 'grid', label: 'Grid', icon: <Icon.Meetings width={14} height={14} /> },
-              { value: 'list', label: 'List', icon: <Icon.Doc width={14} height={14} /> },
+              { value: 'grid', label: 'カード', icon: <Icon.Meetings width={14} height={14} /> },
+              { value: 'list', label: 'リスト', icon: <Icon.Doc width={14} height={14} /> },
             ]}
           />
         }
@@ -91,7 +91,7 @@ export default function Meetings() {
       {channels.length > 1 && (
         <div className="flex items-center gap-2 mb-5 flex-wrap">
           <button onClick={() => setChannel('__all__')}
-            className={`chip ${channel === '__all__' ? '!bg-primary-soft !text-ink' : ''}`}>All channels</button>
+            className={`chip ${channel === '__all__' ? '!bg-primary-soft !text-ink' : ''}`}>すべてのチャンネル</button>
           {channels.map((c) => (
             <button key={c} onClick={() => setChannel(c)}
               className={`chip ${channel === c ? '!bg-primary-soft !text-ink' : ''}`}>
@@ -102,11 +102,11 @@ export default function Meetings() {
       )}
 
       {error ? (
-        <Empty icon={Icon.Meetings} title="Couldn't load meetings" body={error} />
+        <Empty icon={Icon.Meetings} title="録音一覧を読み込めませんでした" body={error} />
       ) : !meetings ? (
         <GridSkeleton view={view} />
       ) : filtered.length === 0 ? (
-        <div className="card"><Empty icon={Icon.Meetings} title="No meetings yet" body="Recorded meetings will show up here." /></div>
+        <div className="card"><Empty icon={Icon.Meetings} title="録音はまだありません" body="録音すると、ここに表示されます。" /></div>
       ) : view === 'grid' ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((m) => <MeetingCard key={m.id} m={m} />)}

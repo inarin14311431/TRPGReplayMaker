@@ -10,37 +10,37 @@ import Markdown from '../components/Markdown.jsx';
 /* ── retry banner (failed / stuck meetings) ───────────────────────────── */
 const STATUS_COPY = {
   partial: {
-    title: 'Partial transcript — source audio retained',
-    body: 'Some speaker audio was interrupted or transcription failed. The saved summary may omit conversation. Retry transcription to recover missing parts before creating a replay.',
+    title: '文字起こしが一部完了しました（元の音声は保存済み）',
+    body: '一部の音声が途切れたか、文字起こしに失敗しました。要約に抜けがある可能性があります。リプレイを作る前に、文字起こしをやり直してください。',
   },
   transcription_failed: {
-    title: 'Transcription failed',
-    body: 'The speech-to-text sidecar was unreachable or errored while transcribing this meeting. If the audio is still on disk, you can retry the whole pipeline.',
+    title: '文字起こしに失敗',
+    body: '文字起こし機能に接続できないか、処理中にエラーが発生しました。音声が残っていれば、最初からやり直せます。',
   },
   summary_failed: {
-    title: 'Summary failed',
-    body: 'The transcript was captured, but the summarizer errored (often a transient rate-limit or a missing API key). Retrying re-runs only the summary.',
+    title: '要約に失敗',
+    body: '文字起こしは保存されましたが、要約に失敗しました。APIキーや利用上限を確認し、要約をやり直してください。',
   },
   processing: {
-    title: 'Stuck processing',
-    body: 'This meeting was left mid-process, likely because the bot restarted. Retry to finish it.',
+    title: '処理が途中で止まりました',
+    body: 'Botの再起動などで処理が途中で止まりました。再試行すると処理を再開します。',
   },
 };
 
 function RetryBanner({ meeting, retry, onDone }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
-  const copy = STATUS_COPY[meeting.status] || { title: 'Needs attention', body: `Status: ${meeting.status}.` };
+  const copy = STATUS_COPY[meeting.status] || { title: '状態を確認してください', body: `Status: ${meeting.status}.` };
   const canRetry = retry?.eligible;
 
   async function run() {
     setBusy(true); setErr(null);
     try {
       const r = await api.retryMeeting(meeting.id);
-      if (!r.ok) { setErr(r.error || r.reason || 'Retry failed.'); }
+      if (!r.ok) { setErr(r.error || r.reason || '再試行に失敗しました。'); }
       else { onDone?.(); }
     } catch (e) {
-      setErr(e?.message || 'Retry failed.');
+      setErr(e?.message || '再試行に失敗しました。');
     } finally {
       setBusy(false);
     }
@@ -58,9 +58,9 @@ function RetryBanner({ meeting, retry, onDone }) {
           <div className="mt-3.5 flex items-center gap-2">
             <button onClick={run} disabled={!canRetry || busy} className="btn btn-primary !py-2">
               {busy ? (
-                <span className="inline-flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />Retrying…</span>
+                <span className="inline-flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />再試行中…</span>
               ) : (
-                <span className="inline-flex items-center gap-2"><Icon.Refresh width={15} height={15} />Retry {retry?.action === 'retranscribe' ? 'transcription' : 'summary'}</span>
+                <span className="inline-flex items-center gap-2"><Icon.Refresh width={15} height={15} />{retry?.action === 'retranscribe' ? '文字起こしをやり直す' : '要約をやり直す'}</span>
               )}
             </button>
           </div>
@@ -116,16 +116,16 @@ function Transcript({ utterances }) {
         <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 text-sm font-bold text-ink">
           <Icon.Chevron width={16} height={16} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
           Transcript
-          <span className="chip">{utterances.length} lines</span>
+          <span className="chip">{utterances.length}件の発言</span>
         </button>
         {open && (
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find in transcript…"
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="この文字起こし内を検索…"
             className="input !w-52 !py-1.5 text-[13px]" />
         )}
       </div>
       {open && (
         <div className="space-y-4">
-          {filtered.length === 0 && <p className="text-sm text-muted">No lines match "{q}".</p>}
+          {filtered.length === 0 && <p className="text-sm text-muted">「{q}」に一致する発言がありません。</p>}
           {filtered.map((u, i) => (
             <div key={i} className="flex items-start gap-3">
               <Avatar name={u.display_name} size={28} />
@@ -151,14 +151,14 @@ function AskBox({ guildId, meetingId }) {
   const [answer, setAnswer] = useState(null);
   const [error, setError] = useState(null);
 
-  const SUGGESTIONS = ['What was decided?', 'Who owns what?', 'Summarize in 3 bullets'];
+  const SUGGESTIONS = ['何が決まりましたか？', '誰が何を担当しますか？', '3つの箇条書きでまとめて'];
 
   async function ask(qStr) {
     const q = (qStr ?? question).trim();
     if (!q || loading) return;
     setQuestion(q); setLoading(true); setAnswer(null); setError(null);
     try { const res = await api.ask(guildId, meetingId, q); setAnswer(res.answer); }
-    catch (err) { setError(err?.message || 'Request failed'); }
+    catch (err) { setError(err?.message || 'リクエストに失敗しました'); }
     finally { setLoading(false); }
   }
 
@@ -169,7 +169,7 @@ function AskBox({ guildId, meetingId }) {
         <Icon.Sparkle width={16} height={16} className="text-primary" /> Ask this meeting
       </h2>
       <form onSubmit={(e) => { e.preventDefault(); ask(); }} className="flex gap-2">
-        <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask anything about this meeting…"
+        <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="この録音について質問…"
           disabled={loading} className="input flex-1" />
         <button type="submit" disabled={!question.trim() || loading} className="btn btn-primary">
           {loading ? 'Asking…' : 'Ask'}
@@ -205,21 +205,21 @@ function MeetingActions({ meeting, meetings }) {
 
   async function del() {
     setOpen(false);
-    if (!window.confirm('Delete this meeting, its transcript, summary and action items? This cannot be undone.')) return;
+    if (!window.confirm('この録音と、文字起こし・要約・タスクを削除しますか？ 元に戻せません。')) return;
     try { await api.deleteMeeting(meeting.id); navigate('/meetings'); }
-    catch (e) { setErr(e?.message || 'Delete failed'); }
+    catch (e) { setErr(e?.message || '削除に失敗しました'); }
   }
   function toggle(id) { setSources((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
   async function merge() {
     if (sources.size === 0) return;
     setMode('busy'); setErr(null);
     try { await api.mergeMeetings(meeting.id, [...sources]); setMode(false); setSources(new Set()); navigate(0); }
-    catch (e) { setErr(e?.message || 'Merge failed'); setMode('pick'); }
+    catch (e) { setErr(e?.message || '統合に失敗しました'); setMode('pick'); }
   }
 
   return (
     <div className="relative shrink-0" ref={ref}>
-      <button onClick={() => { setOpen((v) => !v); setMode(false); }} aria-label="Meeting actions"
+      <button onClick={() => { setOpen((v) => !v); setMode(false); }} aria-label="録音の操作"
         aria-haspopup="menu" aria-expanded={open || !!mode}
         className="h-9 w-9 grid place-items-center rounded-sm border border-border text-muted hover:text-ink hover:bg-surface-2 transition-colors">
         <Icon.Dots width={18} height={18} />
@@ -228,20 +228,20 @@ function MeetingActions({ meeting, meetings }) {
         <div role="menu" className="absolute right-0 mt-1.5 w-52 card shadow-lg py-1 z-20">
           <a href={api.exportMeetingUrl(meeting.id, 'md')} role="menuitem" onClick={() => setOpen(false)}
             className="w-full flex items-center gap-2.5 text-left px-3 py-2 text-sm text-ink hover:bg-surface-2 no-underline">
-            <Icon.Download width={15} height={15} /> Export (markdown)
+            <Icon.Download width={15} height={15} /> Markdownで保存
           </a>
           <button role="menuitem" onClick={() => { setMode('pick'); setOpen(false); }} disabled={others.length === 0}
             className="w-full flex items-center gap-2.5 text-left px-3 py-2 text-sm text-ink hover:bg-surface-2 disabled:opacity-40">
-            <Icon.Merge width={15} height={15} /> Merge another meeting
+            <Icon.Merge width={15} height={15} /> 別の録音を統合
           </button>
           <button role="menuitem" onClick={del} className="w-full flex items-center gap-2.5 text-left px-3 py-2 text-sm text-error hover:bg-error-soft">
-            <Icon.Trash width={15} height={15} /> Delete meeting
+            <Icon.Trash width={15} height={15} /> 録音を削除
           </button>
         </div>
       )}
       {mode && (
         <div className="absolute right-0 mt-1.5 w-80 card shadow-lg p-3 z-20">
-          <p className="text-sm font-semibold text-ink mb-2">Merge into this note</p>
+          <p className="text-sm font-semibold text-ink mb-2">このノートに統合</p>
           <div className="max-h-64 overflow-y-auto -mx-1 px-1 space-y-0.5">
             {others.map((m) => (
               <label key={m.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-surface-2 cursor-pointer text-sm">
@@ -253,9 +253,9 @@ function MeetingActions({ meeting, meetings }) {
           </div>
           {err && <p className="text-xs text-error mt-2">{err}</p>}
           <div className="flex items-center justify-end gap-2 mt-3">
-            <button onClick={() => { setMode(false); setSources(new Set()); setErr(null); }} disabled={mode === 'busy'} className="btn btn-ghost !py-1.5">Cancel</button>
+            <button onClick={() => { setMode(false); setSources(new Set()); setErr(null); }} disabled={mode === 'busy'} className="btn btn-ghost !py-1.5">キャンセル</button>
             <button onClick={merge} disabled={sources.size === 0 || mode === 'busy'} className="btn btn-primary !py-1.5">
-              {mode === 'busy' ? 'Merging…' : `Merge ${sources.size || ''}`.trim()}
+              {mode === 'busy' ? '統合中…' : `${sources.size}件を統合`}
             </button>
           </div>
         </div>
@@ -276,12 +276,12 @@ function MeetingNav({ meetings, id }) {
       {older ? (
         <Link to={`/meetings/${older.id}`} className="group flex items-center gap-2 text-sm text-muted hover:text-ink no-underline">
           <Icon.Arrow width={16} height={16} className="rotate-180" />
-          <span><span className="block text-[11px] text-faint">Older</span>{fmtDateLong(older.started_at)}</span>
+          <span><span className="block text-[11px] text-faint">前の録音</span>{fmtDateLong(older.started_at)}</span>
         </Link>
       ) : <span />}
       {newer ? (
         <Link to={`/meetings/${newer.id}`} className="group flex items-center gap-2 text-sm text-muted hover:text-ink no-underline text-right">
-          <span><span className="block text-[11px] text-faint">Newer</span>{fmtDateLong(newer.started_at)}</span>
+          <span><span className="block text-[11px] text-faint">次の録音</span>{fmtDateLong(newer.started_at)}</span>
           <Icon.Arrow width={16} height={16} />
         </Link>
       ) : <span />}
@@ -312,7 +312,7 @@ function Note({ data, todos, guildId, meetings, refetchTodos, onReload }) {
             <h1 className="font-display text-[30px] font-extrabold text-ink leading-tight tracking-tight">{fmtDateLong(meeting.started_at)}</h1>
             <p className="text-sm text-muted mt-1.5 flex items-center gap-3 flex-wrap">
               <span className="inline-flex items-center gap-1.5"><Icon.Clock width={14} height={14} />{fmtTime(meeting.started_at)}{duration && ` · ${duration}`}</span>
-              {attendees?.length > 0 && <span className="inline-flex items-center gap-1.5"><Icon.Users width={14} height={14} />{attendees.length} attendees</span>}
+              {attendees?.length > 0 && <span className="inline-flex items-center gap-1.5"><Icon.Users width={14} height={14} />参加者{attendees.length}人</span>}
             </p>
           </div>
           <MeetingActions meeting={meeting} meetings={meetings} />
@@ -329,7 +329,7 @@ function Note({ data, todos, guildId, meetings, refetchTodos, onReload }) {
 
       {isFailed && <RetryBanner meeting={meeting} retry={retry} onDone={onReload} />}
 
-      {!notes && !isFailed && <p className="text-sm text-muted mt-8">No summary available — status: {meeting.status}.</p>}
+      {!notes && !isFailed && <p className="text-sm text-muted mt-8">要約はまだありません。</p>}
 
       {notes && (
         <>
@@ -337,7 +337,7 @@ function Note({ data, todos, guildId, meetings, refetchTodos, onReload }) {
 
           {notes.topics?.length > 0 && (
             <section className="mt-9">
-              <h2 className="text-sm font-bold text-ink mb-4">Topics</h2>
+              <h2 className="text-sm font-bold text-ink mb-4">話題</h2>
               <div className="space-y-5">
                 {notes.topics.map((t, i) => (
                   <div key={i} className="relative pl-4 border-l-2" style={{ borderColor: 'var(--border-strong)' }}>
@@ -359,7 +359,7 @@ function Note({ data, todos, guildId, meetings, refetchTodos, onReload }) {
 
           {notes.decisions?.length > 0 && (
             <section className="mt-9">
-              <h2 className="text-sm font-bold text-ink mb-3">Decisions</h2>
+              <h2 className="text-sm font-bold text-ink mb-3">決定事項</h2>
               <ul className="space-y-2">
                 {notes.decisions.map((d, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-[14.5px] text-ink leading-relaxed">
@@ -372,7 +372,7 @@ function Note({ data, todos, guildId, meetings, refetchTodos, onReload }) {
 
           {notes.openQuestions?.length > 0 && (
             <section className="mt-9">
-              <h2 className="text-sm font-bold text-ink mb-3">Open questions</h2>
+              <h2 className="text-sm font-bold text-ink mb-3">未解決の質問</h2>
               <ul className="space-y-2">
                 {notes.openQuestions.map((q, i) => (
                   <li key={i} className="text-[14.5px] text-ink leading-relaxed flex gap-2.5">
@@ -401,7 +401,7 @@ function Note({ data, todos, guildId, meetings, refetchTodos, onReload }) {
 
       {summary?.talktime?.length > 0 && (
         <section className="mt-9">
-          <h2 className="text-sm font-bold text-ink mb-4">Talk time</h2>
+          <h2 className="text-sm font-bold text-ink mb-4">発言時間</h2>
           <div className="mb-3"><TalkBar talktime={summary.talktime} height={8} /></div>
           <div className="space-y-2.5">
             {summary.talktime.map((t, i) => (
@@ -480,13 +480,13 @@ export default function Reading() {
     setLoading(true); setError(null); setData(null);
     Promise.all([api.meeting(id), api.todos(guildId)])
       .then(([m, t]) => { if (stale) return; setData(m); setTodos(Array.isArray(t) ? t : []); })
-      .catch((e) => { if (!stale) setError(e?.message || 'Failed to load meeting'); })
+      .catch((e) => { if (!stale) setError(e?.message || '録音の読み込みに失敗しました'); })
       .finally(() => { if (!stale) setLoading(false); });
     return () => { stale = true; };
   }, [id, guildId]);
 
   if (loading || (!data && !error)) return <NoteSkeleton />;
-  if (error) return <div className="px-8 py-10"><Empty icon={Icon.Doc} title="Couldn't load meeting" body={error} /></div>;
+  if (error) return <div className="px-8 py-10"><Empty icon={Icon.Doc} title="録音を読み込めませんでした" body={error} /></div>;
 
   return (
     <div className="px-6 md:px-8 py-7">

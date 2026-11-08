@@ -9,15 +9,15 @@ import { Icon, Logo, Avatar } from './ui.jsx';
 import { RecDot } from './Live.jsx';
 
 const NAV = [
-  { to: '/', label: 'Dashboard', icon: Icon.Home, end: true },
-  { to: '/live', label: 'Live', icon: Icon.Radio, live: true },
-  { to: '/meetings', label: 'Meetings', icon: Icon.Meetings },
+  { to: '/', label: 'ホーム', icon: Icon.Home, end: true },
+  { to: '/live', label: '録音状況', icon: Icon.Radio, live: true },
+  { to: '/meetings', label: '録音一覧', icon: Icon.Meetings },
   { to: '/replays', label: 'リプレイ作成', icon: Icon.Doc },
   { to: '/guide', label: '使い方ガイド', icon: Icon.Shield },
-  { to: '/action-items', label: 'Action items', icon: Icon.CheckSquare },
-  { to: '/analytics', label: 'Analytics', icon: Icon.Chart },
-  { to: '/search', label: 'Search', icon: Icon.Search },
-  { to: '/commands', label: 'Commands', icon: Icon.Terminal },
+  { to: '/action-items', label: 'タスク', icon: Icon.CheckSquare },
+  { to: '/analytics', label: '集計', icon: Icon.Chart },
+  { to: '/search', label: '検索', icon: Icon.Search },
+  { to: '/commands', label: 'Discordコマンド', icon: Icon.Terminal },
 ];
 
 function GuildSwitcher() {
@@ -28,10 +28,10 @@ function GuildSwitcher() {
       <select
         value={guildId || ''}
         onChange={(e) => setGuildId(e.target.value)}
-        aria-label="Select server"
+        aria-label="サーバーを選択"
         className="appearance-none bg-surface-2 hover:bg-surface-3 border border-border rounded-sm text-sm font-medium text-ink pl-3 pr-8 py-1.5 cursor-pointer transition-colors focus:outline-none focus:border-primary max-w-[220px] truncate"
       >
-        {guilds.length === 0 && <option value="">No servers</option>}
+        {guilds.length === 0 && <option value="">サーバーがありません</option>}
         {guilds.map((g) => (
           <option key={g.id} value={g.id}>{g.name}</option>
         ))}
@@ -65,7 +65,7 @@ function UserMenu() {
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1 hover:bg-surface-2 transition-colors"
-        aria-label="Account menu" aria-haspopup="menu" aria-expanded={open}
+        aria-label="アカウントメニュー" aria-haspopup="menu" aria-expanded={open}
       >
         <Avatar name={user.username} size={28} />
         <span className="text-sm font-medium text-ink hidden sm:block max-w-[120px] truncate">{user.username}</span>
@@ -78,10 +78,10 @@ function UserMenu() {
             <p className="text-xs text-muted truncate">{user.email || (user.isAdmin ? 'Administrator' : 'Member')}</p>
           </div>
           <Link to="/account" role="menuitem" className="nav-link !py-2" onClick={() => setOpen(false)}>
-            <Icon.Settings width={16} height={16} />Account & users
+            <Icon.Settings width={16} height={16} />アカウント・ユーザー管理
           </Link>
           <button role="menuitem" onClick={logout} className="nav-link !py-2 w-full !text-error">
-            <Icon.LogOut width={16} height={16} />Sign out
+            <Icon.LogOut width={16} height={16} />ログアウト
           </button>
         </div>
       )}
@@ -136,14 +136,14 @@ export default function Layout() {
         </Link>
 
         <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto" onClick={() => setNavOpen(false)}>
-          <p className="px-2 pt-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-faint">Workspace</p>
+          <p className="px-2 pt-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-faint">メニュー</p>
           {NAV.map((item) => <NavItem key={item.to} {...item} />)}
         </nav>
 
         <div className="px-3 py-3 border-t border-border" onClick={() => setNavOpen(false)}>
           <NavLink to="/setup" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             <Icon.Settings width={18} height={18} className="shrink-0" />
-            <span>Settings</span>
+            <span>設定</span>
           </NavLink>
         </div>
       </aside>
@@ -152,7 +152,7 @@ export default function Layout() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="shrink-0 h-[60px] border-b border-border bg-bg/80 backdrop-blur flex items-center gap-3 px-4 sm:px-6">
           {/* Hamburger — only below md, where the sidebar is a drawer. */}
-          <button onClick={() => setNavOpen(true)} aria-label="Open navigation"
+          <button onClick={() => setNavOpen(true)} aria-label="メニューを開く"
             className="md:hidden h-9 w-9 grid place-items-center rounded-sm border border-border text-muted hover:text-ink hover:bg-surface-2 transition-colors">
             <Icon.Menu width={18} height={18} />
           </button>
@@ -163,7 +163,7 @@ export default function Layout() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search transcripts…"
+              placeholder="文字起こしを検索…"
               className="bg-surface-2 border border-border rounded-sm text-sm text-ink pl-8 pr-3 py-1.5 w-[240px] focus:w-[320px] transition-all focus:outline-none focus:border-primary placeholder:text-muted"
             />
           </form>
@@ -173,8 +173,8 @@ export default function Layout() {
             <button
               onClick={toggle}
               className="h-9 w-9 grid place-items-center rounded-sm border border-border text-muted hover:text-ink hover:bg-surface-2 transition-colors"
-              aria-label="Toggle theme"
-              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              aria-label="テーマを切り替える"
+              title={theme === 'dark' ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}
             >
               {theme === 'dark' ? <Icon.Sun width={17} height={17} /> : <Icon.Moon width={17} height={17} />}
             </button>
