@@ -55,7 +55,7 @@ function RetryBanner({ meeting, retry, onDone }) {
           <p className="text-[13.5px] text-muted leading-relaxed mt-1">{copy.body}</p>
           {!canRetry && retry?.reason && <p className="text-[13px] text-error mt-2">{retry.reason}</p>}
           {err && <p className="text-[13px] text-error mt-2">{err}</p>}
-          <div className="mt-3.5 flex items-center gap-2">
+          <div className="mt-3.5 flex flex-wrap items-center gap-3">
             <button onClick={run} disabled={!canRetry || busy} className="btn btn-primary !py-2">
               {busy ? (
                 <span className="inline-flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />再試行中…</span>
@@ -63,6 +63,9 @@ function RetryBanner({ meeting, retry, onDone }) {
                 <span className="inline-flex items-center gap-2"><Icon.Refresh width={15} height={15} />{retry?.action === 'retranscribe' ? '文字起こしをやり直す' : '要約をやり直す'}</span>
               )}
             </button>
+            {(meeting.status === 'transcription_failed' || meeting.status === 'partial') && (
+              <Link to="/guide#transcription-help" className="text-sm text-primary underline">文字起こしの確認手順を開く</Link>
+            )}
           </div>
         </div>
       </div>

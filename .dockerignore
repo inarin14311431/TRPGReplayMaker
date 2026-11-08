@@ -21,7 +21,8 @@ audio/
 assets/parley-demo.mp4
 
 # Docs & dev cruft
-docs/
+docs/*
+!docs/user-manual.md
 .superpowers/
 *.log
 .DS_Store
