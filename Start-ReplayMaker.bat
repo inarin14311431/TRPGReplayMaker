@@ -17,19 +17,19 @@ if exist "%~dp0runtime\node.exe" (
 "%NODE_EXE%" -e "process.exit(parseInt(process.versions.node,10)>=24?0:1)" >nul 2>&1
 if errorlevel 1 (
   echo [ERROR] Node.js 24 or newer is required.
-  echo Download a Windows Portable ZIP from GitHub Releases, or install Node.js 24.
+  echo Download the Windows ZIP from the user manual, or install Node.js 24.
   pause
   exit /b 1
 )
 if not exist "node_modules\express\package.json" (
-  echo Installing application dependencies (first source checkout only)...
+  echo Installing application dependencies for the first source checkout...
   where npm >nul 2>&1
   if errorlevel 1 goto :missingNpm
   call npm ci --omit=dev
   if errorlevel 1 goto :installError
 )
 if not exist "web\dist\index.html" (
-  echo Building browser dashboard (first source checkout only)...
+  echo Building browser dashboard for the first source checkout...
   where npm >nul 2>&1
   if errorlevel 1 goto :missingNpm
   call npm --prefix web ci
@@ -72,7 +72,7 @@ exit /b %RESULT%
 
 :missingNode
 echo [ERROR] Node.js was not found.
-echo Use the prebuilt Portable ZIP from GitHub Releases/Actions.
+echo Download the Windows ZIP from the user manual.
 echo Or install Node.js 24 and use this GitHub source archive.
 pause
 exit /b 1
