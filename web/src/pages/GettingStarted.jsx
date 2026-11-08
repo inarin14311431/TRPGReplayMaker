@@ -1,11 +1,26 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useSystem } from '../SystemContext.jsx';
 import { useGuild } from '../GuildContext.jsx';
 import { api } from '../api.js';
 import { Page, PageHead } from '../components/Page.jsx';
 import { Icon } from '../components/ui.jsx';
 import { discordInviteUrl } from '../lib/discord-invite.js';
+
+import Markdown from '../components/Markdown.jsx';
+import manual from '../../../docs/user-manual.md?raw';
+import replayExample from '../../../examples/nova-short-replay.html?url';
+
+const manualLinks = {
+  '#1-アプリをダウンロードする': '#download',
+  '../examples/nova-short-replay.html': replayExample,
+};
+const sectionIds = ['download', 'launch', 'discord-bot', 'transcription', 'recording', 'replay', 'backup', 'transcription-help', 'troubleshooting'];
+const [manualIntro, ...manualSections] = manual.trim().split(/^## /m);
+const chapters = manualSections.map((section, index) => {
+  const newline = section.indexOf('\n');
+  return { id: sectionIds[index], title: section.slice(0, newline), text: section.slice(newline + 1).trim() };
+});
 
 function Stage({ number, title, done, children }) {
   return (
@@ -26,6 +41,11 @@ function Stage({ number, title, done, children }) {
 }
 
 export default function GettingStarted() {
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, [hash]);
+
   const { status, refresh } = useSystem();
   const { guilds, guildId, refreshGuilds } = useGuild();
   const [meetingCount, setMeetingCount] = useState(null);
@@ -56,7 +76,7 @@ export default function GettingStarted() {
 
   return (
     <Page>
-      <PageHead title="はじめての方へ" subtitle="初回のBot接続だけ管理者が行えば、参加者はDiscordで普段どおり話すだけです。" />
+      <PageHead title="はじめての方へ" subtitle="DiscordのBot接続から、録音・文字起こし・リプレイの保存まで説明します。" />
       <div className="flex flex-wrap gap-2 mb-5 text-xs text-muted">
         <span>Bot：{botReady ? '接続済み' : '未接続'}</span>
         <span>／</span>
@@ -66,6 +86,7 @@ export default function GettingStarted() {
         <button className="text-primary underline" onClick={updateStatus}>状態を更新</button>
       </div>
       {error && <p role="alert" className="text-sm text-error mb-4">{error}</p>}
+      <p className="mb-4 text-sm"><a className="text-primary underline" href="#manual">マニュアルの目次へ</a></p>
       <div className="grid md:grid-cols-3 gap-4 items-start">
         <Stage number={1} title="DiscordにBotを追加" done={botReady && hasServer}>
           <p>すでにBotが接続できている場合、設定のやり直しは不要です。</p>
@@ -89,18 +110,39 @@ export default function GettingStarted() {
           {portable && !localSttAvailable && <div className="rounded-md border border-border p-3 text-xs text-muted leading-relaxed">
             <p className="font-bold text-ink">録音後の文字起こし方式を先に選択</p>
             <p className="mt-1">Docker不要のZIP版には、PythonのローカルWhisperは標準搭載していません。<Link to="/setup" className="underline text-primary">設定</Link> で OpenAI APIキーを設定し、文字起こしをOpenAI（有料）に切り替えるか、付属の Setup-Local-Whisper.bat で無料のローカル音声認識を追加してください。</p>
-            <p className="mt-1">どちらも選ばず録音すると、文字起こし処理に失敗します。APIの利用料金は各自のアカウントで発生します。</p>
+            <p className="mt-1">録音前に選んだ方式で短いテスト録音を行い、発言が表示されることを確認してください。</p>
           </div>}
           {!portable && <p className="text-xs text-muted">初回の文字起こしでは音声モデルのダウンロードが必要になる場合があります。</p>}
         </Stage>
         <Stage number={3} title="リプレイを作成・保存" done={false}>
           <p>録音が終わったら、リプレイ作成画面でアクト名・キャスト名を入力し、必要なシーンを自動分割します。</p>
-          <p>文章生成は低価格APIかローカルAIを選べます。結果を確認したらMarkdownで保存できます。</p>
+          <p>文章生成は低価格APIかローカルAIを選べます。結果を確認したらHTMLで保存できます。</p>
           <Link to="/replays" className="btn btn-primary !py-2 no-underline inline-flex">
             リプレイ作成を開く <Icon.Arrow width={15} height={15}/>
           </Link>
         </Stage>
       </div>
+      <section id="manual" className="mt-8 scroll-mt-4">
+        <h2 className="text-xl font-bold text-ink mb-3">操作マニュアル（Windows）</h2>
+        <Markdown text={manualIntro.replace(/^# .*\n/, '').trim()} links={manualLinks} className="text-sm text-ink-2" />
+        <nav aria-label="マニュアルの目次" className="card p-5 mt-4">
+          <h3 className="font-bold text-ink mb-2">目次</h3>
+          <ul className="grid gap-2 sm:grid-cols-2 text-sm">
+            {chapters.map(chapter => (
+              <li key={chapter.id}><a className="text-primary underline" href={'#' + chapter.id}>{chapter.title}</a></li>
+            ))}
+          </ul>
+        </nav>
+        <div className="mt-4 space-y-4">
+          {chapters.map(chapter => (
+            <section id={chapter.id} key={chapter.id} className="card p-5 scroll-mt-4">
+              <h3 className="font-bold text-ink mb-3">{chapter.title}</h3>
+              {chapter.id === 'transcription-help' && <p className="mb-3 text-sm"><Link to="/setup" className="text-primary underline">文字起こしの設定を開く</Link></p>}
+              <Markdown text={chapter.text} links={manualLinks} className="text-sm text-ink-2 leading-relaxed" />
+            </section>
+          ))}
+        </div>
+      </section>
       <div className="mt-5 card p-4 text-sm text-muted leading-relaxed">
         <strong className="text-ink">ご注意：</strong> このアプリは現時点では自分のPCなどで動かす構成です。
         GitHubのURLを開くだけでは録音Botは起動しません。録音PCを終了するとBotも停止します。

@@ -9,6 +9,8 @@ WORKDIR /app/web
 COPY web/package.json web/package-lock.json* ./
 RUN npm install
 COPY web/ ./
+COPY docs/user-manual.md /app/docs/user-manual.md
+COPY examples/nova-short-replay.html /app/examples/nova-short-replay.html
 RUN npm run build
 
 # 2) Install production node_modules (needs build tools for @discordjs/opus)
