@@ -88,7 +88,7 @@ export default function GettingStarted() {
           <p><Link className="text-primary underline" to="/live">録音中の状態を見る</Link></p>
           {portable && !localSttAvailable && <div className="rounded-md border border-border p-3 text-xs text-muted leading-relaxed">
             <p className="font-bold text-ink">録音後の文字起こし方式を先に選択</p>
-            <p className="mt-1">Docker不要のZIP版には、PythonのローカルWhisperは標準搭載していません。<Link to="/setup" className="underline text-primary">Settings</Link> で OpenAI APIキーを設定し、文字起こしをOpenAI（有料）に切り替えるか、付属の Setup-Local-Whisper.bat で無料のローカル音声認識を追加してください。</p>
+            <p className="mt-1">Docker不要のZIP版には、PythonのローカルWhisperは標準搭載していません。<Link to="/setup" className="underline text-primary">設定</Link> で OpenAI APIキーを設定し、文字起こしをOpenAI（有料）に切り替えるか、付属の Setup-Local-Whisper.bat で無料のローカル音声認識を追加してください。</p>
             <p className="mt-1">どちらも選ばず録音すると、文字起こし処理に失敗します。APIの利用料金は各自のアカウントで発生します。</p>
           </div>}
           {!portable && <p className="text-xs text-muted">初回の文字起こしでは音声モデルのダウンロードが必要になる場合があります。</p>}

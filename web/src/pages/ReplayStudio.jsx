@@ -109,7 +109,7 @@ function SessionPicker() {
     return () => { alive = false; };
   }, [guildId]);
   return (
-    <Page><PageHead title="TRPG Replay Studio" subtitle="録音したセッションからリプレイ編集を開始します。" />
+    <Page><PageHead title="TRPGリプレイ編集" subtitle="録音したセッションからリプレイ編集を開始します。" />
       {error && <p className="text-error">{error}</p>}
       {!guildId && <p className="text-muted">Discordサーバーを選択してください。</p>}
       {guildId && meetings.length === 0 && <p className="text-muted">まだ録音済みのセッションがありません。</p>}
@@ -250,7 +250,7 @@ function ReplayWorkspace({ id }) {
   return (
     <Page max="1800px">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <PageHead title="Replay Studio" subtitle={'録音 #' + id + ' · ' + data.count.toLocaleString() + ' 発言'} />
+        <PageHead title="リプレイ編集" subtitle={'録音 #' + id + ' · ' + data.count.toLocaleString() + ' 発言'} />
         <div className="flex flex-wrap gap-2">
           <a href={api.replayExportUrl(id, 'html', 'draft')} className={primary + ' no-underline'}>完成版HTML (.html)</a>
           <a href={api.replayExportUrl(id, 'md', 'draft')} className={secondary + ' no-underline'}>原稿を保存 (.md)</a>

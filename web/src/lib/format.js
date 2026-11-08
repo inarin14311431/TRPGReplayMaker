@@ -18,7 +18,7 @@ export function fmtDateLong(raw) {
   const d = toDate(raw);
   if (!d) return String(raw ?? '');
   const now = new Date();
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString('ja-JP', {
     weekday: 'long', month: 'long', day: 'numeric',
     ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
   });
@@ -29,7 +29,7 @@ export function fmtDateShort(raw) {
   const d = toDate(raw);
   if (!d) return '';
   const now = new Date();
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString('ja-JP', {
     month: 'short', day: 'numeric',
     ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
   });
@@ -38,7 +38,7 @@ export function fmtDateShort(raw) {
 /** "3:42 PM" */
 export function fmtTime(raw) {
   const d = toDate(raw);
-  return d ? d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+  return d ? d.toLocaleTimeString('ja-JP', { hour: 'numeric', minute: '2-digit' }) : '';
 }
 
 /** Relative label for lists: time today, "Yesterday", weekday this week, else short date. */
@@ -48,26 +48,26 @@ export function fmtRelative(raw) {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const days = Math.floor((start - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
-  if (days <= 0) return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return d.toLocaleDateString('en-US', { weekday: 'long' });
+  if (days <= 0) return d.toLocaleTimeString('ja-JP', { hour: 'numeric', minute: '2-digit' });
+  if (days === 1) return '昨日';
+  if (days < 7) return d.toLocaleDateString('ja-JP', { weekday: 'long' });
   return fmtDateShort(raw);
 }
 
 /** Calendar bucket for grouping a meeting list. */
 export function bucketOf(raw) {
   const d = toDate(raw);
-  if (!d) return 'Earlier';
+  if (!d) return 'それ以前';
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const days = Math.floor((start - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
-  if (days <= 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return 'This week';
-  if (days < 30) return 'This month';
-  return 'Earlier';
+  if (days <= 0) return '今日';
+  if (days === 1) return '昨日';
+  if (days < 7) return '過去7日';
+  if (days < 30) return '過去30日';
+  return 'それ以前';
 }
-export const BUCKET_ORDER = ['Today', 'Yesterday', 'This week', 'This month', 'Earlier'];
+export const BUCKET_ORDER = ['今日', '昨日', '過去7日', '過去30日', 'それ以前'];
 
 /** Duration between two timestamps → "1h 12m" / "8 min" / null. */
 export function fmtDuration(start, end) {

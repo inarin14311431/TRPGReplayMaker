@@ -61,7 +61,7 @@ export default function Search() {
     setLoading(true); setError(null);
     api.search(guildId, q)
       .then((data) => { if (stale) return; setRows(Array.isArray(data) ? data : []); setSearched(true); setLoading(false); })
-      .catch((e) => { if (stale) return; setError(e?.message || 'Search failed'); setLoading(false); });
+      .catch((e) => { if (stale) return; setError(e?.message || '検索に失敗しました'); setLoading(false); });
     return () => { stale = true; };
   }, [urlQ, guildId]);
 
@@ -69,18 +69,18 @@ export default function Search() {
 
   return (
     <Page max="820px">
-      <PageHead title="Search" subtitle="Full-text search across every recorded transcript." />
+      <PageHead title="検索" subtitle="すべての文字起こしから検索します。" />
 
       <form onSubmit={submit} className="relative mb-7">
         <Icon.Search width={18} height={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
-        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Search words or phrases…" autoFocus
+        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="単語やフレーズを入力…" autoFocus
           className="input !pl-11 !py-3 text-[15px]" />
       </form>
 
       {loading ? <SearchSkeleton />
-        : error ? <Empty icon={Icon.Search} title="Search failed" body={error} />
+        : error ? <Empty icon={Icon.Search} title="検索に失敗しました" body={error} />
         : searched && rows.length === 0 ? (
-          <Empty icon={Icon.Search} title={`No matches${urlQ ? ` for "${urlQ}"` : ''}`} body="Try different keywords or a shorter phrase." />
+          <Empty icon={Icon.Search} title={`一致する発言がありません${urlQ ? `（「${urlQ}」）` : ''}`} body="別のキーワードや短い語句で試してください。" />
         ) : rows.length > 0 ? (
           <>
             <p className="text-xs text-muted mb-2 px-1">{rows.length} {rows.length === 1 ? 'result' : 'results'}</p>
@@ -89,7 +89,7 @@ export default function Search() {
             </ul>
           </>
         ) : (
-          <Empty icon={Icon.Search} title="Search your meetings" body="Find any moment by what was said. Results link straight to the meeting." />
+          <Empty icon={Icon.Search} title="録音内容を検索" body="発言を検索し、結果から元の録音を開けます。" />
         )}
     </Page>
   );

@@ -89,9 +89,9 @@ export function ModelPicker({ value, catalog, loading = false, onPick, onRefresh
   }
 
   const source = catalog?.source;
-  const hint = loading ? 'Loading catalog…'
+  const hint = loading ? 'モデル一覧を読み込み中…'
     : source === 'live' ? `${models.length} model${models.length === 1 ? '' : 's'} available`
-    : catalog?.error ? `Catalog unavailable (${catalog.error}) — showing known models` : '';
+    : catalog?.error ? `モデル一覧を取得できません（${catalog.error}) — showing known models` : '';
 
   return (
     <div ref={boxRef} className="relative">
@@ -105,20 +105,20 @@ export function ModelPicker({ value, catalog, loading = false, onPick, onRefresh
           aria-autocomplete="list"
           aria-activedescendant={open && shown[active] ? `${id}-${active}` : undefined}
           value={open ? query : (value || '')}
-          placeholder={open ? 'Search models…' : (value || 'Pick a model…')}
+          placeholder={open ? 'モデルを検索…' : (value || 'モデルを選択…')}
           onFocus={() => setOpen(true)}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onKeyDown={onKeyDown}
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
           {onRefresh && (
-            <button type="button" title="Reload the provider's model list"
+            <button type="button" title="モデル一覧を再読み込み"
               className="p-1 rounded text-muted hover:text-ink"
               onClick={() => { onRefresh(); setOpen(true); inputRef.current?.focus(); }}>
               <Icon.Refresh width={14} height={14} className={loading ? 'animate-spin' : ''} />
             </button>
           )}
-          <button type="button" tabIndex={-1} aria-label="Toggle model list"
+          <button type="button" tabIndex={-1} aria-label="モデル一覧を開閉"
             className="p-1 rounded text-muted hover:text-ink"
             onClick={() => { if (open) close(); else { setOpen(true); inputRef.current?.focus(); } }}>
             <Icon.Chevron width={14} height={14} className="rotate-90" />
@@ -131,7 +131,7 @@ export function ModelPicker({ value, catalog, loading = false, onPick, onRefresh
           className="absolute z-20 mt-1 w-full max-h-72 overflow-y-auto card shadow-lg p-1">
           {shown.length === 0 && (
             <p className="px-2.5 py-2 text-xs text-muted">
-              {models.length ? 'No match. Press Enter to use it anyway.' : 'No catalog. Type an id and press Enter.'}
+              {models.length ? '一致するモデルがありません。このIDを使うにはEnterを押してください。' : '一覧を取得できません。モデルIDを入力してEnterを押してください。'}
             </p>
           )}
           {shown.map((m, i) => {
@@ -157,7 +157,7 @@ export function ModelPicker({ value, catalog, loading = false, onPick, onRefresh
           })}
           {results.length > shown.length && (
             <p className="px-2.5 py-1.5 text-xs text-muted">
-              +{results.length - shown.length} more — keep typing to narrow.
+              +{results.length - shown.length} 件あります。入力して絞り込んでください。
             </p>
           )}
         </div>

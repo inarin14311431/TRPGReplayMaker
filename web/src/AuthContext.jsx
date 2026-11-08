@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
         // Transient failure: do NOT fail open. Keep auth on and record the error
         // so the gate can offer a retry instead of exposing the dashboard.
         setUser(null);
-        setError(e?.message || 'Could not reach the server.');
+        setError(e?.message || 'サーバーに接続できませんでした。');
       }
       return null;
     } finally {

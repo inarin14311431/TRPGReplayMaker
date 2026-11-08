@@ -27,19 +27,19 @@ export default function Analytics() {
     setAgg(null); setError(null);
     api.stats(guildId)
       .then((a) => { if (!stale) setAgg(a); })
-      .catch((e) => { if (!stale) setError(e?.message || 'Failed to load'); });
+      .catch((e) => { if (!stale) setError(e?.message || '読み込みに失敗しました'); });
     return () => { stale = true; };
   }, [guildId]);
 
   const wordRows = useMemo(() => {
     if (!agg) return [];
     return agg.leaderboard.slice(0, 8).map((p) => ({
-      label: p.displayName, value: p.words, display: `${fmtCompact(p.words)} words`, color: colorOf(p.displayName),
+      label: p.displayName, value: p.words, display: `${fmtCompact(p.words)}語`, color: colorOf(p.displayName),
     }));
   }, [agg]);
 
-  if (!guildId) return <Page><Empty icon={Icon.Chart} title="No server selected" /></Page>;
-  if (error) return <Page><Empty icon={Icon.Chart} title="Couldn't load analytics" body={error} /></Page>;
+  if (!guildId) return <Page><Empty icon={Icon.Chart} title="サーバーが選択されていません" /></Page>;
+  if (error) return <Page><Empty icon={Icon.Chart} title="集計を読み込めませんでした" body={error} /></Page>;
   if (!agg) return (
     <Page>
       <div className="h-8 w-44 skeleton mb-7" />
@@ -57,33 +57,33 @@ export default function Analytics() {
 
   return (
     <Page>
-      <PageHead title="Analytics" subtitle="Talk-time, participation and meeting cadence across this server." />
+      <PageHead title="集計" subtitle="このサーバーの発言時間、参加状況、録音数を確認できます。" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatTile label="Total meetings" value={stats.totalMeetings} sub={`over ${totalDays} active days`} />
-        <StatTile label="Total talk time" value={fmtHours(stats.totalTalkMs)} sub={`${fmtCompact(stats.totalUtterances)} utterances`} />
-        <StatTile label="Avg / active day" value={avgPerActiveDay.toFixed(1)} sub="meetings" />
-        <StatTile label="Action items" value={stats.todos.total} sub={`${stats.todos.open} open`} />
+        <StatTile label="総録音数" value={stats.totalMeetings} sub={`録音した日数 ${totalDays}日`} />
+        <StatTile label="総発言時間" value={fmtHours(stats.totalTalkMs)} sub={`発言 ${fmtCompact(stats.totalUtterances)}件`} />
+        <StatTile label="録音した日の平均" value={avgPerActiveDay.toFixed(1)} sub="件" />
+        <StatTile label="タスク" value={stats.todos.total} sub={`未完了${stats.todos.open}件`} />
       </div>
 
       <div className="card p-5 mb-6">
-        <SectionHead title="Meetings per day" action={<span className="text-xs text-muted">last 30 days</span>} />
+        <SectionHead title="日ごとの録音数" action={<span className="text-xs text-muted">過去30日</span>} />
         <BarChart data={timeline} height={190} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="card p-5">
-          <SectionHead title="Talk time by person" />
-          {talkRows.length === 0 ? <p className="text-sm text-muted py-4">No data yet.</p> : <RankBars rows={talkRows} />}
+          <SectionHead title="参加者ごとの発言時間" />
+          {talkRows.length === 0 ? <p className="text-sm text-muted py-4">データがありません。</p> : <RankBars rows={talkRows} />}
         </div>
         <div className="card p-5">
-          <SectionHead title="Words spoken" />
-          {wordRows.length === 0 ? <p className="text-sm text-muted py-4">No data yet.</p> : <RankBars rows={wordRows} />}
+          <SectionHead title="発言した単語数" />
+          {wordRows.length === 0 ? <p className="text-sm text-muted py-4">データがありません。</p> : <RankBars rows={wordRows} />}
         </div>
       </div>
 
       <div className="card p-5 mt-6">
-        <SectionHead title="Participation" action={<span className="text-xs text-muted">{leaderboard.length} people</span>} />
+        <SectionHead title="参加状況" action={<span className="text-xs text-muted">{leaderboard.length}人</span>} />
         <div className="flex items-center gap-6 flex-wrap">
           <Donut value={stats.todos.done} total={stats.todos.total || 1}
             label={`${Math.round((stats.todos.done / (stats.todos.total || 1)) * 100)}%`} sub="tasks done" />
@@ -94,7 +94,7 @@ export default function Analytics() {
                   <Avatar name={p.displayName} size={26} />
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] text-ink truncate">{p.displayName}</div>
-                    <div className="text-[11px] text-muted">{p.meetings} meetings · {fmtMs(p.ms)}</div>
+                    <div className="text-[11px] text-muted">{p.meetings}件 · {fmtMs(p.ms)}</div>
                   </div>
                 </div>
               ))}

@@ -8,7 +8,7 @@ export default function Live() {
   const { guildId } = useGuild();
   const { live, error } = useLive();
 
-  if (!guildId) return <Page><Empty icon={Icon.Radio} title="No server selected" body="Pick a Discord server to see its live recordings." /></Page>;
+  if (!guildId) return <Page><Empty icon={Icon.Radio} title="サーバーが選択されていません" body="Discordサーバーを選ぶと録音状況が表示されます。" /></Page>;
 
   const recording = live.filter((s) => s.phase !== 'processing').length;
   const processing = live.length - recording;
@@ -20,8 +20,8 @@ export default function Live() {
   return (
     <Page>
       <PageHead
-        title="Live"
-        subtitle={counts || 'Real-time view of in-progress recordings'}
+        title="録音状況"
+        subtitle={counts || '進行中の録音をリアルタイムで確認できます。'}
       />
       {error && (
         <div className="mb-5 text-sm text-error bg-error-soft rounded-sm px-3 py-2">{error}</div>
@@ -30,8 +30,8 @@ export default function Live() {
         <div className="card">
           <Empty
             icon={Icon.Radio}
-            title="Nothing recording right now"
-            body="When Parley joins a voice channel, the live session shows up here with a timer and a one-click stop. Use /trpg-start in Discord or join a voice channel with auto-join on."
+            title="現在録音していません"
+            body="Discordで /trpg-start を実行するか、自動参加が有効なボイスチャンネルに入ると、ここに録音時間と停止ボタンが表示されます。"
           />
         </div>
       ) : (

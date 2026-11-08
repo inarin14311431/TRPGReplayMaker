@@ -34,10 +34,10 @@ function StopButton({ channelId, small = false }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   async function run() {
-    if (!window.confirm('Stop this recording? Parley will leave the channel and post the notes.')) return;
+    if (!window.confirm('録音を停止しますか？ Botはチャンネルから退出し、ノートを投稿します。')) return;
     setBusy(true); setErr(null);
     try { await stop(channelId); }
-    catch (e) { setErr(e?.message || 'Failed to stop.'); setBusy(false); }
+    catch (e) { setErr(e?.message || '録音を停止できませんでした。'); setBusy(false); }
   }
   return (
     <div className="flex items-center gap-2">
@@ -45,8 +45,8 @@ function StopButton({ channelId, small = false }) {
       <button onClick={run} disabled={busy}
         className={`btn btn-ghost !text-error ${small ? '!py-1.5' : '!py-2'}`}>
         {busy
-          ? <span className="inline-flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />Stopping…</span>
-          : <span className="inline-flex items-center gap-1.5"><Icon.Stop width={14} height={14} />Stop & post notes</span>}
+          ? <span className="inline-flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />停止中…</span>
+          : <span className="inline-flex items-center gap-1.5"><Icon.Stop width={14} height={14} />録音を止めてノートを投稿</span>}
       </button>
     </div>
   );
@@ -69,13 +69,13 @@ function RecordingCard({ session }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <RecDot />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-error">Recording</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-error">録音中</span>
             <span className="chip"><Icon.Hash width={11} height={11} />{session.channelName}</span>
           </div>
           <div className="font-display text-[26px] font-extrabold tabular-nums text-ink leading-none mt-2">
             {fmtClock(elapsed)}
           </div>
-          <p className="text-xs text-muted mt-1.5">Meeting #{session.meetingId} · {names.length} {names.length === 1 ? 'person' : 'people'} in the channel</p>
+          <p className="text-xs text-muted mt-1.5">録音 #{session.meetingId} · チャンネルに{names.length}人</p>
         </div>
         <div className="flex flex-col items-end gap-3">
           <AvatarStack names={names} size={26} max={6} />
@@ -96,18 +96,18 @@ function ProcessingCard({ session }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="h-3 w-3 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--warn)', borderTopColor: 'transparent' }} />
-            <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--warn)' }}>Processing</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--warn)' }}>処理中</span>
             <span className="chip"><Icon.Hash width={11} height={11} />{session.channelName}</span>
           </div>
           <div className="font-display text-[26px] font-extrabold tabular-nums text-ink leading-none mt-2">
             {fmtClock(elapsed)}
           </div>
-          <p className="text-xs text-muted mt-1.5">Meeting #{session.meetingId} · Transcribing and summarizing — notes will post when done.</p>
+          <p className="text-xs text-muted mt-1.5">録音 #{session.meetingId} · 文字起こしと要約が終わるとノートが投稿されます。</p>
         </div>
         <div className="flex flex-col items-end gap-3">
           <AvatarStack names={names} size={26} max={6} />
           <Link to={`/meetings/${session.meetingId}`} className="btn btn-ghost !py-1.5">
-            View meeting <Icon.Arrow width={14} height={14} />
+            録音を開く <Icon.Arrow width={14} height={14} />
           </Link>
         </div>
       </div>

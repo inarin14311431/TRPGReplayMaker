@@ -77,9 +77,9 @@ function Gate() {
     return (
       <div className="min-h-screen grid place-items-center bg-bg text-ink p-6">
         <div className="card p-7 max-w-[400px] w-full text-center">
-          <h1 className="font-display text-lg font-extrabold mb-1">Can't reach the server</h1>
+          <h1 className="font-display text-lg font-extrabold mb-1">サーバーに接続できません</h1>
           <p className="text-sm text-muted mb-5">{error}</p>
-          <button onClick={refresh} className="btn btn-primary !py-2.5 w-full justify-center">Retry</button>
+          <button onClick={refresh} className="btn btn-primary !py-2.5 w-full justify-center">再試行</button>
         </div>
       </div>
     );

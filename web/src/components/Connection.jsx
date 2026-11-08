@@ -41,7 +41,7 @@ function SecretField({ label, hint, present, value, onChange, placeholder }) {
           type={reveal ? 'text' : 'password'} value={value} placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)} className="input !pr-12" autoComplete="off" spellCheck={false} />
         <button type="button" onClick={() => setReveal((r) => !r)}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink text-xs">{reveal ? 'Hide' : 'Show'}</button>
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink text-xs">{reveal ? '非表示' : '表示'}</button>
       </div>
       {present && (
         <button type="button" onClick={() => { onChange(''); setEditing(false); }} className="text-xs text-muted hover:text-ink mt-1.5">既存のキーを使う</button>
@@ -55,7 +55,7 @@ function SecretField({ label, hint, present, value, onChange, placeholder }) {
  * `connection` object. Calls onSaved(result) after a successful save.
  * `compact` drops the in-card heading (Settings supplies its own).
  */
-export function ConnectionForm({ conn, onSaved, submitLabel = 'Save & connect' }) {
+export function ConnectionForm({ conn, onSaved, submitLabel = '保存して接続' }) {
   const [token, setToken] = useState('');
   const [clientId, setClientId] = useState(conn?.discordClientId?.value || '');
   const [sttUrl, setSttUrl] = useState(conn?.sttUrl?.value || '');
@@ -112,7 +112,7 @@ export function ConnectionForm({ conn, onSaved, submitLabel = 'Save & connect' }
       </div>
       <details className="text-xs text-muted">
         <summary className="cursor-pointer">詳細設定：文字起こしサーバーURL（通常は変更不要）</summary>
-      <Labeled label="STT sidecar URL" hint="Where the local faster-whisper sidecar listens. In Docker this is set for you.">
+      <Labeled label="ローカル文字起こしの接続先URL" hint="ローカルのfaster-whisperに接続するURLです。Docker版では自動で設定されます。">
         <input className="input" value={sttUrl} onChange={(e) => setSttUrl(e.target.value)}
           placeholder="http://127.0.0.1:8000" autoComplete="off" />
       </Labeled>
@@ -128,10 +128,10 @@ export function ConnectionForm({ conn, onSaved, submitLabel = 'Save & connect' }
 /** A compact live badge for the bot connection state. */
 export function BotStatusBadge({ bot }) {
   const map = {
-    ready: { label: 'Connected', color: 'var(--accent)', bg: 'var(--accent-soft)' },
-    starting: { label: 'Connecting…', color: 'var(--warn)', bg: 'var(--warn-soft)' },
-    error: { label: 'Error', color: 'var(--error)', bg: 'var(--error-soft)' },
-    stopped: { label: 'Not connected', color: 'var(--muted)', bg: 'var(--surface-3)' },
+    ready: { label: '接続済み', color: 'var(--accent)', bg: 'var(--accent-soft)' },
+    starting: { label: '接続中…', color: 'var(--warn)', bg: 'var(--warn-soft)' },
+    error: { label: 'エラー', color: 'var(--error)', bg: 'var(--error-soft)' },
+    stopped: { label: '未接続', color: 'var(--muted)', bg: 'var(--surface-3)' },
   };
   const s = map[bot?.state] || map.stopped;
   return (
