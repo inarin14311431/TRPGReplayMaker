@@ -11,7 +11,7 @@ Discord Bot作成・招待・音声認識・原稿作成までの流れは [初�
 ## 2. 自分のAI APIキーを設定
 1. Web管理画面 `Settings` の生成AIプロバイダー設定で、使いたいAPI（Gemini / OpenAI / OpenRouter / OpenCode）を選びます。
 2. 該当プロバイダーのAPIキーを画面で登録します。ローカルOllamaはAPIキー不要ですが、別途インストールと接続設定が必要です。
-3. Discordで `/join` → セッション → `/leave` と録音した後、Replay Studioで対象のアクトを開きます。
+3. Discordで `/trpg-start` → セッション → `/trpg-stop` と録音した後、Replay Studioで対象のアクトを開きます。
 4. `アクト設定・発言者とキャストの対応` を開き、`文章生成方式` → `自分のAI API・モデルを指定` を選びます。
 5. プロバイダーとモデルIDを入力します（例：OpenAI → `gpt-4o-mini`、Gemini → `gemini-2.5-flash`）。入力値はモデルの提供元で利用可能なものを指定してください。
 6. `アクト設定を保存` を押し、生成します。設定変更時のキーの入力先はReplay StudioではなくSettingsです。

@@ -84,7 +84,7 @@ export default function GettingStarted() {
         </Stage>
         <Stage number={2} title="Discordで録音する" done={hasServer && meetingCount !== null && meetingCount > 0}>
           <p>参加者全員の同意を取ってから、Discordのボイスチャンネルに入ります。</p>
-          <p>チャット欄で <code className="font-mono text-ink">/join</code> と入力すると録音開始。終わったら <code className="font-mono text-ink">/leave</code> で保存・文字起こしを開始します。</p>
+          <p>チャット欄で <code className="font-mono text-ink">/trpg-start</code> と入力すると録音開始。終わったら <code className="font-mono text-ink">/trpg-stop</code> で保存・文字起こしを開始します。</p>
           <p><Link className="text-primary underline" to="/live">録音中の状態を見る</Link></p>
           {portable && !localSttAvailable && <div className="rounded-md border border-border p-3 text-xs text-muted leading-relaxed">
             <p className="font-bold text-ink">録音後の文字起こし方式を先に選択</p>

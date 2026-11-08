@@ -7,7 +7,7 @@ Discordのボイスチャットを録音・文字起こしし、TRPGリプレイ
 1. **[Windows版をダウンロード（ZIP）](https://inarin14311431.github.io/TRPGReplayMaker/TRPGReplayMaker-Windows.zip)**。クリックすると保存が始まります。
 2. ZIPを右クリックして **すべて展開** を選び、**Start-ReplayMaker.bat** をダブルクリックします。
 3. ブラウザの画面に沿ってDiscord Botと文字起こしを設定します。
-4. Discordで **/join → セッション → /leave**。ブラウザでリプレイを編集し、**HTMLで保存**します。
+4. Discordで **/trpg-start → セッション → /trpg-stop**。ブラウザでリプレイを編集し、**HTMLで保存**します。
 
 **[初めての方はこちら：クリックする場所から説明したマニュアル](docs/user-manual.md)**
 
