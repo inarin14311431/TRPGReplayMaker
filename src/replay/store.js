@@ -11,6 +11,13 @@ const clean = (value, max) => typeof value === 'string' ? value.trim().slice(0, 
 const now = () => new Date().toISOString();
 const touch = (db, id) => db.sql.prepare('UPDATE replay_projects SET revision=revision+1,updated_at=? WHERE meeting_id=?').run(now(), id);
 
+// A split is an ordered overlay. Unsplit utterances still contribute one row.
+const replayLinesFrom = ' FROM utterances u LEFT JOIN replay_line_edits e ON e.meeting_id=u.meeting_id AND e.utterance_id=u.id'
+  + " JOIN json_each(COALESCE(e.parts_json, '[null]')) part";
+const replayLineText = "COALESCE(json_extract(part.value, '$.text'), u.text)";
+const replayLineCorrection = "CASE WHEN part.value IS NULL THEN e.corrected_text ELSE json_extract(part.value, '$.correctedText') END";
+const replayLineHidden = "COALESCE(json_extract(part.value, '$.hidden'), e.hidden, 0)";
+
 export function installReplayTables(db) {
   db.sql.exec([
     'CREATE TABLE IF NOT EXISTS replay_projects (',
@@ -31,6 +38,10 @@ export function installReplayTables(db) {
     ' speech_kind TEXT NOT NULL DEFAULT \'unknown\', hidden INTEGER NOT NULL DEFAULT 0,',
     ' updated_at TEXT NOT NULL, PRIMARY KEY(meeting_id, utterance_id));',
   ].join('\n'));
+  const columns = db.sql.prepare('PRAGMA table_info(replay_line_edits)').all();
+  if (!columns.some(column => column.name === 'parts_json')) {
+    db.sql.exec('ALTER TABLE replay_line_edits ADD COLUMN parts_json TEXT');
+  }
   installReplayUsageTable(db);
 }
 
@@ -74,7 +85,7 @@ export function getReplayOverview(db, id) {
     characterName: byId.get(id)?.character_name || '',
     role: byId.get(id)?.role || 'PL',
   }));
-  const count = db.sql.prepare('SELECT COUNT(*) AS c FROM utterances WHERE meeting_id = ?').get(meeting.id).c;
+  const count = db.sql.prepare('SELECT COUNT(*) AS c' + replayLinesFrom + ' WHERE u.meeting_id=?').get(meeting.id).c;
   return { meeting, project, scenes, speakers, count, originMs: originTime(db, meeting) };
 }
 
@@ -162,17 +173,45 @@ export function updateReplayLine(db, meetingId, utteranceId, patch) {
   const line = db.sql.prepare('SELECT * FROM utterances WHERE id=? AND meeting_id=?').get(id, meetingId);
   if (!line) return null;
   const old = db.sql.prepare('SELECT * FROM replay_line_edits WHERE utterance_id=? AND meeting_id=?').get(id, meetingId);
-  const kind = patch.speechKind === undefined ? (old?.speech_kind || 'unknown') : patch.speechKind;
+  const parts = old?.parts_json ? JSON.parse(old.parts_json) : null;
+  const partIndex = parts?.findIndex(part => part.id === patch.partId) ?? -1;
+  if (parts ? partIndex < 0 : patch.partId != null) {
+    throw Object.assign(new Error('発言の分割状態が変わりました。画面を更新してください。'), { status: 409 });
+  }
+  const part = parts?.[partIndex];
+  const originalText = part?.text ?? line.text;
+  const currentText = part ? part.correctedText : old?.corrected_text;
+  const kind = patch.speechKind === undefined ? (part?.speechKind || old?.speech_kind || 'unknown') : patch.speechKind;
   if (!valid(kind, SPEECH_KINDS)) throw Object.assign(new Error('Unknown speech kind.'), { status: 400 });
   if (patch.correctedText !== undefined && typeof patch.correctedText !== 'string' && patch.correctedText !== null)
     throw Object.assign(new Error('Corrected text must be a string or null.'), { status: 400 });
-  const corrected = patch.correctedText === undefined ? (old?.corrected_text ?? null) :
+  const corrected = patch.correctedText === undefined ? (currentText ?? null) :
     (patch.correctedText === null ? null : patch.correctedText.slice(0, 20000));
-  const hidden = patch.hidden === undefined ? (old?.hidden || 0) : (patch.hidden === true ? 1 : 0);
-  db.sql.prepare('INSERT INTO replay_line_edits (meeting_id,utterance_id,corrected_text,speech_kind,hidden,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(meeting_id,utterance_id) DO UPDATE SET corrected_text=excluded.corrected_text,speech_kind=excluded.speech_kind,hidden=excluded.hidden,updated_at=excluded.updated_at')
-    .run(meetingId, id, corrected, kind, hidden, now());
+  const hidden = patch.hidden === undefined ? (part?.hidden ?? old?.hidden ?? 0) : (patch.hidden === true ? 1 : 0);
+  let nextParts = parts;
+  if (patch.splitTexts !== undefined) {
+    const texts = patch.splitTexts;
+    if (patch.sourceText !== (currentText ?? originalText)) {
+      throw Object.assign(new Error('発言が変更されました。画面を更新してから分割してください。'), { status: 409 });
+    }
+    if (!Array.isArray(texts) || texts.length < 2 || (parts?.length ?? 1) - 1 + texts.length > 40
+        || texts.some(text => typeof text !== 'string' || !text.trim() || text.length > 20000)) {
+      throw Object.assign(new Error('空欄を除き、1件の原文を2〜40件の発言に分けてください。'), { status: 400 });
+    }
+    let nextId = parts ? Math.max(...parts.map(item => item.id)) + 1 : 1;
+    const split = texts.map((text, index) => ({
+      id: index === 0 && part ? part.id : nextId++,
+      text: text.trim(), correctedText: null, speechKind: kind, hidden,
+    }));
+    nextParts = parts ? parts.toSpliced(partIndex, 1, ...split) : split;
+  } else if (part) {
+    nextParts = parts.toSpliced(partIndex, 1, { ...part, correctedText: corrected, speechKind: kind, hidden });
+  }
+  db.sql.prepare('INSERT INTO replay_line_edits (meeting_id,utterance_id,corrected_text,speech_kind,hidden,updated_at,parts_json) VALUES(?,?,?,?,?,?,?) ON CONFLICT(meeting_id,utterance_id) DO UPDATE SET corrected_text=excluded.corrected_text,speech_kind=excluded.speech_kind,hidden=excluded.hidden,updated_at=excluded.updated_at,parts_json=excluded.parts_json')
+    .run(meetingId, id, part ? old.corrected_text : corrected, part ? old.speech_kind : kind,
+      part ? old.hidden : hidden, now(), nextParts ? JSON.stringify(nextParts) : null);
   touch(db, meetingId);
-  return { id, originalText: line.text, correctedText: corrected, speechKind: kind, hidden: !!hidden };
+  return { id, originalText, correctedText: corrected, speechKind: kind, hidden: !!hidden };
 }
 
 export function sceneBounds(scenes, sceneId) {
@@ -192,15 +231,17 @@ export function transcriptPage(db, meetingId, { sceneId = null, offset = 0, limi
   const bounds = sceneBounds(scenes, sceneId);
   const clause = bounds ? ' AND u.start_ms >= ?' + (bounds.end === null ? '' : ' AND u.start_ms < ?') : '';
   const args = [meetingId, ...(bounds ? [origin + bounds.start, ...(bounds.end === null ? [] : [origin + bounds.end])] : [])];
-  const total = db.sql.prepare('SELECT COUNT(*) AS c FROM utterances u WHERE u.meeting_id=?' + clause).get(...args).c;
+  const total = db.sql.prepare('SELECT COUNT(*) AS c' + replayLinesFrom + ' WHERE u.meeting_id=?' + clause).get(...args).c;
   const rows = db.sql.prepare([
-    'SELECT u.id,u.user_id,u.display_name,u.start_ms,u.end_ms,u.text,',
-    ' e.corrected_text,e.speech_kind,e.hidden',
-    ' FROM utterances u LEFT JOIN replay_line_edits e ON e.meeting_id=u.meeting_id AND e.utterance_id=u.id',
-    ' WHERE u.meeting_id=?' + clause + ' ORDER BY u.start_ms,u.id LIMIT ? OFFSET ?',
+    'SELECT u.id,u.user_id,u.display_name,u.start_ms,u.end_ms,u.text AS source_text,',
+    replayLineText + ' AS text, ' + replayLineCorrection + ' AS corrected_text, ',
+    "COALESCE(json_extract(part.value, '$.speechKind'), e.speech_kind) AS speech_kind, ",
+    replayLineHidden + " AS hidden, json_extract(part.value, '$.id') AS part_id",
+    replayLinesFrom,
+    ' WHERE u.meeting_id=?' + clause + ' ORDER BY u.start_ms,u.id,part.key LIMIT ? OFFSET ?',
   ].join('')).all(...args, limit, offset);
   const result = rows.map(u => ({
-    id: u.id, userId: u.user_id, originalName: u.display_name,
+    id: u.id, ...(u.part_id === null ? {} : { partId: u.part_id, sourceText: u.source_text }), userId: u.user_id, originalName: u.display_name,
     startMs: u.start_ms, endMs: u.end_ms,
     elapsedMs: Math.max(0, u.start_ms - origin),
     originalText: u.text, correctedText: u.corrected_text,
@@ -220,7 +261,9 @@ export function autoSplitReplay(db, meetingId, { targetChars = 12000 } = {}) {
     throw Object.assign(new Error('targetChars must be between 2000 and 30000.'), { status: 400 });
   const origin = originTime(db, m);
   const existing = db.sql.prepare('SELECT start_ms FROM replay_scenes WHERE meeting_id=? ORDER BY start_ms').all(meetingId).map(s => s.start_ms);
-  const iterator = db.sql.prepare('SELECT u.start_ms,u.text,e.corrected_text,e.hidden FROM utterances u LEFT JOIN replay_line_edits e ON e.meeting_id=u.meeting_id AND e.utterance_id=u.id WHERE u.meeting_id=? ORDER BY u.start_ms,u.id').iterate(meetingId);
+  const iterator = db.sql.prepare('SELECT u.start_ms, ' + replayLineText + ' AS text, ' + replayLineCorrection
+    + ' AS corrected_text, ' + replayLineHidden + ' AS hidden' + replayLinesFrom
+    + ' WHERE u.meeting_id=? ORDER BY u.start_ms,u.id,part.key').iterate(meetingId);
   let chars = 0, last = 0, ix = 1;
   const created = [];
   for (const row of iterator) {

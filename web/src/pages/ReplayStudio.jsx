@@ -47,11 +47,13 @@ function SpeakerEditor({ person, onSave }) {
 
 function TranscriptLine({ line, person, meetingId, onSave, onStartScene }) {
   const [editing, setEditing] = useState(false);
+  const [splitDraft, setSplitDraft] = useState(null);
   const [corrected, setCorrected] = useState(line.correctedText ?? line.originalText);
   const [kind, setKind] = useState(line.speechKind);
   const [hidden, setHidden] = useState(line.hidden);
   const [busy, setBusy] = useState(false);
   const shown = line.correctedText ?? line.originalText;
+  const splitTexts = splitDraft?.text.split(/\r?\n/).map(text => text.trim()).filter(Boolean) ?? [];
   useEffect(() => { setCorrected(shown); setKind(line.speechKind); setHidden(line.hidden); }, [shown, line.speechKind, line.hidden]);
   const name = kind === 'character' && person?.characterName ? person.characterName : (person?.playerName || line.originalName);
   return (
@@ -62,14 +64,33 @@ function TranscriptLine({ line, person, meetingId, onSave, onStartScene }) {
         <span className="text-faint">{TYPES.find(x => x[0] === line.speechKind)?.[1] || '未分類'}</span>
         {line.correctedText !== null && <span className="text-primary">修正済</span>}
         {line.hidden && <span className="text-error">非表示</span>}
-        <button className="ml-auto text-primary hover:underline" onClick={() => setEditing(x => !x)}>{editing ? '閉じる' : '修正'}</button>
+        <button className="ml-auto text-primary hover:underline" onClick={() => { setSplitDraft(null); setEditing(x => !x); }}>{editing ? '閉じる' : '修正'}</button>
+        <button className="text-primary hover:underline" disabled={busy} onClick={() => {
+          setEditing(false);
+          setSplitDraft(splitDraft === null ? { source: shown, text: shown } : null);
+        }}>{splitDraft === null ? '発言を分割' : '分割を閉じる'}</button>
         <button className="text-muted hover:underline" onClick={() => onStartScene(line.elapsedMs)}>ここからシーン</button>
       </div>
       <p className={'text-sm whitespace-pre-wrap break-words ' + (line.hidden ? 'text-faint line-through' : 'text-ink')}>{shown}</p>
+      {splitDraft !== null && (
+        <div className="mt-3 space-y-2 bg-surface-2 rounded-md p-3">
+          <p className="text-xs text-muted">発言を分けたい位置にカーソルを置いて Enter を押します。空行を除き、1行が1件の発言になります。</p>
+          <textarea aria-label="発言の区切り" rows={5} className={input} value={splitDraft.text} onChange={e => setSplitDraft({ ...splitDraft, text: e.target.value })} />
+          <div className="flex flex-wrap items-center gap-2">
+            <button className={primary} disabled={busy || splitTexts.length < 2 || splitTexts.length > 40} onClick={async () => {
+              setBusy(true);
+              try {
+                if (await onSave(line.id, { partId: line.partId, sourceText: splitDraft.source, splitTexts })) setSplitDraft(null);
+              } finally { setBusy(false); }
+            }}>{splitTexts.length >= 2 ? splitTexts.length + '件に分割して保存' : '分割して保存'}</button>
+            <button className={secondary} disabled={busy} onClick={() => setSplitDraft(null)}>キャンセル</button>
+          </div>
+        </div>
+      )}
       {editing && (
         <div className="mt-3 space-y-2 bg-surface-2 rounded-md p-3">
           <p className="text-xs text-muted">原文（変更されません）</p>
-          <p className="text-xs text-muted whitespace-pre-wrap break-words">{line.originalText}</p>
+          <p className="text-xs text-muted whitespace-pre-wrap break-words">{line.sourceText ?? line.originalText}</p>
           <div className="space-y-1">
             <p className="text-xs text-muted">原音声（録音保存期間内のみ）</p>
             <audio controls preload="none" className="w-full" src={api.replayAudioUrl(meetingId, line.id)}>
@@ -83,13 +104,13 @@ function TranscriptLine({ line, person, meetingId, onSave, onStartScene }) {
             </select>
             <label className="text-xs flex items-center gap-1.5"><input type="checkbox" checked={hidden} onChange={e => setHidden(e.target.checked)} />リプレイから除外</label>
             <button className={primary} disabled={busy} onClick={async () => {
-              setBusy(true); try { await onSave(line.id, { correctedText: corrected === line.originalText ? null : corrected, speechKind: kind, hidden }); setEditing(false); }
+              setBusy(true); try { await onSave(line.id, { partId: line.partId, correctedText: corrected === line.originalText ? null : corrected, speechKind: kind, hidden }); setEditing(false); }
               finally { setBusy(false); }
             }}>修正を保存</button>
             <button className={secondary} disabled={busy} onClick={async () => {
-              setBusy(true); try { await onSave(line.id, { correctedText: null, speechKind: 'unknown', hidden: false }); setCorrected(line.originalText); setKind('unknown'); setHidden(false); setEditing(false); }
+              setBusy(true); try { await onSave(line.id, { partId: line.partId, correctedText: null, speechKind: 'unknown', hidden: false }); setCorrected(line.originalText); setKind('unknown'); setHidden(false); setEditing(false); }
               finally { setBusy(false); }
-            }}>原文に戻す</button>
+            }}>{line.partId ? '分割時の文に戻す' : '原文に戻す'}</button>
           </div>
         </div>
       )}
@@ -187,7 +208,8 @@ function ReplayWorkspace({ id }) {
       if (refresh) await reload();
       setRefreshPage(x => x + 1);
       setNote(message || '保存しました。');
-    } catch (e) { setError(e.message); }
+      return true;
+    } catch (e) { setError(e.message); return false; }
     finally { setWorking(false); }
   };
   const choose = sid => { setSelected(sid); setOffset(0); setError(''); };
@@ -405,8 +427,8 @@ function ReplayWorkspace({ id }) {
             <h2 className="text-sm font-bold">文字起こし・原文照合</h2>
             <span className="text-xs text-muted">{page.total.toLocaleString()}発言</span>
           </div>
-          <p className="text-xs text-muted mb-3">修正は原文と別に保存されます。発言種別・除外も個別に編集できます。</p>
-          {page.rows.map(line => <TranscriptLine key={line.id} line={line}
+          <p className="text-xs text-muted mb-3">「発言を分割」で長い発言を分けられます。修正・分割は原文と別に保存されます。</p>
+          {page.rows.map(line => <TranscriptLine key={line.id + ':' + (line.partId ?? 0)} line={line}
             person={data.speakers.find(s => s.userId === line.userId)}
             meetingId={id}
             onSave={(uid, changes) => execute(() => api.saveReplayLine(id, uid, changes), '発言を保存しました。')}
