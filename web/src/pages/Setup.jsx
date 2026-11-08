@@ -101,6 +101,24 @@ function PromptEditor({ value, defaultValue, onSave }) {
   );
 }
 
+function HotwordEditor({ value, onSave }) {
+  const [draft, setDraft] = useState(value);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setDraft(value); }, [value]);
+
+  return (
+    <Field label="認識のヒント" hint="地名・キャスト名・TRPG用語などを1行に1語入力します。空欄で保存すると解除できます。">
+      <textarea aria-label="認識のヒント" className="input resize-y" rows={4} maxLength={300}
+        value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={'新星市\n神業'} />
+      <button type="button" className="btn btn-primary mt-2" disabled={busy || draft === value}
+        onClick={async () => {
+          setBusy(true);
+          try { await onSave({ sttHotwords: draft }); } finally { setBusy(false); }
+        }}>認識のヒントを保存</button>
+    </Field>
+  );
+}
+
 function Switch({ checked, onChange, label, desc }) {
   return (
     <label className="flex items-start justify-between gap-4 cursor-pointer select-none">
@@ -485,6 +503,7 @@ export default function Setup() {
 
           {sttDraft ? null : c.sttProvider === 'sidecar' ? (
             <>
+              <HotwordEditor key={guildId} value={c.sttHotwords ?? ''} onSave={save} />
               <Field label="Whisperモデル" hint="大きいモデルほど認識精度が上がりますが、CPUでの処理に時間がかかります。">
                 <div className="relative">
                   <select className={sel} value={c.whisperModel} onChange={(e) => save({ whisperModel: e.target.value })}>

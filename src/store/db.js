@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS guild_config (
   summarizer_provider TEXT, summarizer_model TEXT,
   summarizer_fallback_provider TEXT, summarizer_fallback_model TEXT,
   stt_provider TEXT, stt_model TEXT,
-  whisper_model TEXT, notes_channel_id TEXT,
+  whisper_model TEXT, stt_hotwords TEXT, notes_channel_id TEXT,
   use_thread INTEGER, auto_join INTEGER, language TEXT, summary_language TEXT,
   summary_prompt TEXT
 );
@@ -134,6 +134,9 @@ export function openDb(path) {
 
   // Migration: add summary_language to dbs created before the column existed.
   const cols = sql.prepare(`PRAGMA table_info(guild_config)`).all();
+  if (!cols.some((c) => c.name === 'stt_hotwords')) {
+    sql.exec('ALTER TABLE guild_config ADD COLUMN stt_hotwords TEXT');
+  }
   if (!cols.some((c) => c.name === 'summary_language')) {
     sql.exec(`ALTER TABLE guild_config ADD COLUMN summary_language TEXT`);
   }

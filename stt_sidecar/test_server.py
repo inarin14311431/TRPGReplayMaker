@@ -144,3 +144,21 @@ def test_fake_model_falls_back_to_sequential(monkeypatch):
     _state.update(model=FakeModel(), model_name="small", device="cpu", compute="int8")
     import server
     assert server.get_batched() is None
+
+def test_transcribe_passes_hotwords_to_whisper(monkeypatch):
+    seen = []
+
+    class HintModel(FakeModel):
+        def transcribe(self, path, **kwargs):
+            seen.append(kwargs.get("hotwords"))
+            return super().transcribe(path, **kwargs)
+
+    monkeypatch.setattr("server.get_model", lambda _name: HintModel())
+    monkeypatch.setattr("server.get_batched", lambda: None)
+    response = TestClient(app).post(
+        "/transcribe",
+        data={"hotwords": "新星市、神業"},
+        files={"file": ("a.wav", make_silent_wav(), "audio/wav")},
+    )
+    assert response.status_code == 200
+    assert seen == ["新星市、神業"]

@@ -126,7 +126,12 @@ def health():
 # Plain `def` (audit B1): FastAPI runs sync endpoints in its threadpool, so the
 # event loop — and /health — stay responsive during long transcriptions.
 @app.post("/transcribe")
-def transcribe(file: UploadFile = File(...), model: str = Form("small"), language: str = Form("auto")):
+def transcribe(
+    file: UploadFile = File(...),
+    model: str = Form("small"),
+    language: str = Form("auto"),
+    hotwords: str = Form("", max_length=300),
+):
     m = get_model(model)
     suffix = os.path.splitext(file.filename or "a.wav")[1] or ".wav"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
@@ -136,12 +141,13 @@ def transcribe(file: UploadFile = File(...), model: str = Form("small"), languag
         lang = None if language == "auto" else language
         # Prefer the batched pipeline (parallel VAD segments, 1.7-2.6x faster);
         # fall back to the plain model when batching is off/unavailable.
+        options = {"hotwords": hotwords} if hotwords else {}
         batched = get_batched()
         if batched is not None:
             segments, info = batched.transcribe(
-                path, language=lang, word_timestamps=True, batch_size=_resolve_batch_size())
+                path, language=lang, word_timestamps=True, batch_size=_resolve_batch_size(), **options)
         else:
-            segments, info = m.transcribe(path, language=lang, word_timestamps=True)
+            segments, info = m.transcribe(path, language=lang, word_timestamps=True, **options)
         words, texts = [], []
         for seg in segments:
             texts.append(seg.text)
