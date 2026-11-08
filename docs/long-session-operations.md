@@ -15,7 +15,7 @@
 1. Windowsでは[Docker不要の利用マニュアル](user-manual.md)に沿って配布ZIPを展開、Bot接続と文字起こし方式（OpenAI APIまたは追加導入したローカルWhisper）を設定する。Docker Compose運用の場合は従来のコンテナー方式を利用する。
 2. 既定の音声保持期間は30日（`AUDIO_RETENTION_DAYS=30`）。Windows配布版は `user-data/.env`、Docker版は環境設定で変更できる。長期保管時はディスク容量とアクセス権限を確認する。
 3. 録音の前に参加者全員の同意を取得。公開リポジトリへ実音声、.env、保存DB、原文はコミットしない。
-4. /join で録音開始、/leave で終了。トラックは発話ごとに記録される。
+4. /trpg-start で録音開始、/trpg-stop で終了。トラックは発話ごとに記録される。
 5. 予期しない終了後の会議はWeb UIで transcription_failed、一部が不確実なら partial と表示される。録音の再開ではなく、残存音声の文字起こしを再試行する。
 6. 重要なリプレイは必ず音声と文字起こしを照合し、生成した原稿の誤認識を修正する。
 

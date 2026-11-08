@@ -10,8 +10,8 @@ const STT_MODEL_CHOICES = [...new Set(Object.values(STT_MODELS).flat())];
 
 export function buildCommands() {
   return [
-    new SlashCommandBuilder().setName('join').setDescription('Join your voice channel and start recording'),
-    new SlashCommandBuilder().setName('leave').setDescription('Stop recording and leave'),
+    new SlashCommandBuilder().setName('trpg-start').setDescription('Join your voice channel and start recording'),
+    new SlashCommandBuilder().setName('trpg-stop').setDescription('Stop recording and leave'),
     new SlashCommandBuilder().setName('summary').setDescription('Show notes for a meeting')
       .addIntegerOption((o) => o.setName('meeting').setDescription('Meeting id (default: most recent)')),
     new SlashCommandBuilder().setName('post').setDescription('Post a meeting summary publicly in this channel')
@@ -55,10 +55,10 @@ export function commandsJSON() {
 // marks commands gated behind the Manage Server permission; `args` is a short
 // human description of the options.
 export const COMMAND_CATALOG = [
-  { name: 'join', category: 'Recording', admin: false, args: null,
+  { name: 'trpg-start', category: 'Recording', admin: false, args: null,
     summary: 'Join your current voice channel and start recording.',
     detail: 'Parley joins the voice channel you are in and begins capturing a separate audio track per speaker. Its nickname shows [REC] while recording.' },
-  { name: 'leave', category: 'Recording', admin: false, args: null,
+  { name: 'trpg-stop', category: 'Recording', admin: false, args: null,
     summary: 'Stop recording, transcribe, and post the notes.',
     detail: 'Ends the meeting, transcribes every track locally, and posts the structured notes to the configured channel or a thread.' },
   { name: 'status', category: 'Recording', admin: false, args: null,

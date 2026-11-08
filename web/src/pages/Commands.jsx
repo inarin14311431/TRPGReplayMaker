@@ -76,7 +76,7 @@ export default function Commands() {
               <p className="text-[14px] font-medium text-ink">Tip: auto-record</p>
               <p className="text-[13px] text-muted leading-relaxed mt-1">
                 With auto-join on, the bot records automatically when two or more people are in a voice channel,
-                so nobody has to run <code className="text-ink-2">/join</code>. Toggle it in{' '}
+                so nobody has to run <code className="text-ink-2">/trpg-start</code>. Toggle it in{' '}
                 <Link to="/setup" className="text-primary hover:underline">Settings</Link> or with{' '}
                 <code className="text-ink-2">/setup autojoin</code>.
               </p>

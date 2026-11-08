@@ -159,7 +159,7 @@ test('GET /api/commands returns the command catalog', async () => {
     const { commands } = await (await fetch(`${base}/api/commands`)).json();
     assert.ok(Array.isArray(commands) && commands.length > 0);
     const names = commands.map((c) => c.name);
-    for (const n of ['join', 'leave', 'summary', 'setup']) assert.ok(names.includes(n), `missing ${n}`);
+    for (const n of ['trpg-start', 'trpg-stop', 'summary', 'setup']) assert.ok(names.includes(n), `missing ${n}`);
     assert.equal(commands.find((c) => c.name === 'setup').admin, true);
   } finally { close(); }
 });

@@ -4,7 +4,7 @@ import { commandsJSON } from '../src/commands/definitions.js';
 
 test('exports the v2 commands as JSON', () => {
   const names = commandsJSON().map((c) => c.name).sort();
-  assert.deepEqual(names, ['history', 'join', 'leave', 'post', 'raw', 'search', 'setup', 'status', 'summary']);
+  assert.deepEqual(names, ['history', 'post', 'raw', 'search', 'setup', 'status', 'summary', 'trpg-start', 'trpg-stop']);
 });
 
 test('search command has a required keyword option', () => {

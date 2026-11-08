@@ -13,7 +13,7 @@ const STEPS = [
   },
   {
     title: 'Discordで録音 → ブラウザでリプレイ',
-    content: <>Botを接続できたら、Discordのボイスチャンネルで <code className="text-ink">/join</code> を実行。終了時は <code className="text-ink">/leave</code>。その後、リプレイ作成画面から原稿にします。</>,
+    content: <>Botを接続できたら、Discordのボイスチャンネルで <code className="text-ink">/trpg-start</code> を実行。終了時は <code className="text-ink">/trpg-stop</code>。その後、リプレイ作成画面から原稿にします。</>,
   },
 ];
 

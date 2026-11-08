@@ -117,7 +117,7 @@ export function attachCapture({ connection, guild, audioDir, registry, now = () 
 
   return {
     // End every still-active speaking turn and wait for its PCM to flush, so a
-    // manual /leave or auto-leave never loses the final in-flight utterance.
+    // manual /trpg-stop or auto-leave never loses the final in-flight utterance.
     // Detach the listener FIRST so a new speaking-start between here and the
     // connection being destroyed can't open an untracked stream (leaked handle
     // + orphan .pcm + lost audio, since registry.list() was already snapshotted).

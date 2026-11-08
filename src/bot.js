@@ -105,7 +105,7 @@ export function startBot({ db, audioRoot }) {
     };
   }
   // Shared "the meeting's voice connection is gone for real" path — used both
-  // by the normal /leave + auto-leave flow (stopAndLeave) and by the
+  // by the normal /trpg-stop + auto-leave flow (stopAndLeave) and by the
   // stateChange recovery below (A3). Idempotent: manager.stop() is a no-op if
   // the session already isn't active, and the re-entrancy guard prevents two
   // concurrent callers (e.g. Disconnected-timeout racing a Destroyed event)
@@ -276,7 +276,7 @@ export function startBot({ db, audioRoot }) {
     if (!interaction.isChatInputCommand()) return;
     const { commandName, guild, member } = interaction;
     try {
-      if (commandName === 'join') {
+      if (commandName === 'trpg-start') {
         const vc = member.voice?.channel;
         if (!vc) return interaction.reply({ content: '❌ Join a voice channel first.', ephemeral: true });
         if (manager.isActive(guild.id, vc.id)) return interaction.reply({ content: '✅ Already recording this channel.', ephemeral: true });
@@ -284,7 +284,7 @@ export function startBot({ db, audioRoot }) {
         await joinAndStart(vc);
         return interaction.editReply('✅ Recording started.');
       }
-      if (commandName === 'leave') {
+      if (commandName === 'trpg-stop') {
         const vc = member.voice?.channel;
         const channelId = vc?.id;
         if (!channelId || !manager.isActive(guild.id, channelId)) return interaction.reply({ content: "❌ I'm not recording here.", ephemeral: true });
