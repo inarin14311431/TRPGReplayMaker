@@ -48,7 +48,7 @@ CREATE INDEX IF NOT EXISTS replay_scenes_order ON replay_scenes(meeting_id,start
 CREATE TABLE IF NOT EXISTS replay_line_edits (
   meeting_id INTEGER NOT NULL, utterance_id INTEGER NOT NULL, corrected_text TEXT,
   speech_kind TEXT NOT NULL DEFAULT 'unknown', hidden INTEGER NOT NULL DEFAULT 0,
-  updated_at TEXT NOT NULL, PRIMARY KEY(meeting_id,utterance_id)
+  updated_at TEXT NOT NULL, parts_json TEXT, PRIMARY KEY(meeting_id,utterance_id)
 );
 CREATE TABLE IF NOT EXISTS attendees (
   meeting_id INTEGER, user_id TEXT, display_name TEXT,
@@ -112,6 +112,11 @@ export function openDb(path) {
   // fix for two concurrent bot instances — run one.
   sql.exec('PRAGMA busy_timeout = 5000');
   sql.exec(SCHEMA);
+
+  const replayEditCols = sql.prepare('PRAGMA table_info(replay_line_edits)').all();
+  if (!replayEditCols.some((column) => column.name === 'parts_json')) {
+    sql.exec('ALTER TABLE replay_line_edits ADD COLUMN parts_json TEXT');
+  }
 
   // Migration: track whether every submitted audio track transcribed. NULL is
   // intentionally preserved for legacy meetings whose completeness is unknown.

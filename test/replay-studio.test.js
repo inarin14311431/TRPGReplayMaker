@@ -74,6 +74,28 @@ test('manual transcription correction is overlay-only and raw source remains unc
   assert.equal(transcriptPage(db, id).rows[1].correctedText, null);
 });
 
+test('replay splits keep source audio references and support independent edits across pages', () => {
+  const { db, id } = seed();
+  const overview = getReplayOverview(db, id);
+  const original = db.listUtterances(id)[0];
+  updateReplayLine(db, id, original.id, { correctedText: '到着した。見張る。調べる。待つ。', speechKind: 'gm' });
+  updateReplayLine(db, id, original.id, { sourceText: '到着した。見張る。調べる。待つ。', splitTexts: ['到着した。', '見張る。', '調べる。', '待つ。'] });
+  assert.equal(getReplayOverview(db, id).count, 6);
+  const { rows, total } = transcriptPage(db, id, { limit: 2, offset: 1 });
+  assert.equal(total, 6);
+  assert.deepEqual(rows.map(row => row.originalText), ['見張る。', '調べる。']);
+  assert.ok(rows.every(row => row.id === original.id && row.sourceText === original.text && row.speechKind === 'gm'));
+  updateReplayLine(db, id, original.id, { partId: rows[0].partId, correctedText: '入口で見張る。', speechKind: 'character' });
+  updateReplayLine(db, id, original.id, { partId: rows[1].partId, hidden: true });
+  assert.throws(() => updateReplayLine(db, id, original.id, { correctedText: '古い画面' }), /分割状態/);
+  const sceneRows = rowsForScene(db, id, overview.scenes[0].id);
+  assert.equal(sceneRows[1].speechKind, 'character');
+  const prompt = buildScenePrompt(overview, overview.scenes[0], sceneRows);
+  assert.match(prompt, /到着した。[\s\S]*入口で見張る。[\s\S]*待つ。/);
+  assert.doesNotMatch(prompt, /調べる。/);
+  assert.equal(db.listUtterances(id)[0].text, original.text);
+});
+
 test('cast mapping and script export include source references and omit hidden lines', () => {
   const { db, id } = seed();
   getReplayOverview(db, id);
