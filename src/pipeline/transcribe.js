@@ -6,11 +6,14 @@ import { createHash } from 'node:crypto';
 
 // Stream-hash PCM rather than relying on size alone: a track may be replaced
 // with different audio of the same byte length between failed STT attempts.
-async function pcmSignature(file) {
+async function pcmSignature(file, hotwords) {
   const { size } = await stat(file);
   const hash = createHash('sha256');
   for await (const chunk of createReadStream(file)) hash.update(chunk);
-  return { bytes: size, sha256: hash.digest('hex') };
+  const pcmHash = hash.digest('hex');
+  // Changing hints invalidates saved results without invalidating legacy no-hint checkpoints.
+  const sha256 = hotwords ? createHash('sha256').update(JSON.stringify([pcmHash, hotwords])).digest('hex') : pcmHash;
+  return { bytes: size, sha256 };
 }
 
 // Transcribes each track through a small worker pool instead of one at a
@@ -28,7 +31,8 @@ export async function transcribeTracks(tracks, cfg = {}, deps = {}) {
   // meeting. The provider default can be overridden via deps.stt in tests.
   const transcribe = getSTT(cfg, deps.env, deps.sttDeps);
   const model = resolveSttModel(cfg);
-  const stt = deps.stt || ((wav) => transcribe(wav, { model, language: cfg.language }));
+  const hotwords = cfg.sttProvider === 'openai' ? '' : (cfg.sttHotwords || '').split('\n').join('、');
+  const stt = deps.stt || ((wav) => transcribe(wav, { model, language: cfg.language, hotwords }));
   const cleanup = deps.cleanup || (async (p) => { try { await unlink(p); } catch { /* ignore */ } });
   const checkpoint = deps.checkpoint || null;
   const concurrency = Math.max(1, deps.concurrency ?? (cfg.sttProvider === 'openai' ? 4 : 2));
@@ -45,7 +49,7 @@ export async function transcribeTracks(tracks, cfg = {}, deps = {}) {
       try {
         // Only a checkpoint with an identical PCM size, user and startMs is
         // reusable. The saved text is an exact STT result, not an AI summary.
-        const signature = checkpoint ? await pcmSignature(t.pcmPath) : null;
+        const signature = checkpoint ? await pcmSignature(t.pcmPath, hotwords) : null;
         const cached = checkpoint ? await checkpoint.get(t, signature) : null;
         if (cached !== null && cached !== undefined) {
           if (cached.text) results[i] = cached; // empty speech was saved too

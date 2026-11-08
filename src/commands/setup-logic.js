@@ -98,6 +98,13 @@ export function validateSetup(input, env) {
     patch.summaryLanguage = input.summary_language;
   }
 
+  if (input.sttHotwords !== undefined) {
+    if (typeof input.sttHotwords !== 'string' || input.sttHotwords.length > 300) {
+      return { ok: false, error: '認識のヒントは300文字以内で入力してください。' };
+    }
+    patch.sttHotwords = input.sttHotwords.split(/\r?\n/).map(word => word.trim()).filter(Boolean).join('\n');
+  }
+
   if (input.summaryPrompt === null) {
     patch.summaryPrompt = null; // restore the built-in prompt
   } else if (input.summaryPrompt !== undefined) {
