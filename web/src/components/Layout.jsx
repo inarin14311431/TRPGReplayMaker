@@ -50,7 +50,7 @@ function LiveIndicator() {
       className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full text-xs font-semibold no-underline transition-colors"
       style={{ color: 'var(--error)', background: 'var(--error-soft)' }}>
       <RecDot />
-      {live.length === 1 ? 'Recording' : `${live.length} recording`}
+      {live.length === 1 ? '録音中' : `${live.length} recording`}
     </Link>
   );
 }
@@ -75,7 +75,7 @@ function UserMenu() {
         <div role="menu" className="absolute right-0 mt-1.5 w-52 card shadow-lg p-1.5 z-20 animate-fade-in">
           <div className="px-2.5 py-2 border-b border-border mb-1">
             <p className="text-sm font-semibold text-ink truncate">{user.username}</p>
-            <p className="text-xs text-muted truncate">{user.email || (user.isAdmin ? 'Administrator' : 'Member')}</p>
+            <p className="text-xs text-muted truncate">{user.email || (user.isAdmin ? '管理者' : 'メンバー')}</p>
           </div>
           <Link to="/account" role="menuitem" className="nav-link !py-2" onClick={() => setOpen(false)}>
             <Icon.Settings width={16} height={16} />アカウント・ユーザー管理

@@ -94,7 +94,7 @@ export default function Analytics() {
                   <Avatar name={p.displayName} size={26} />
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] text-ink truncate">{p.displayName}</div>
-                    <div className="text-[11px] text-muted">{p.meetings} meetings · {fmtMs(p.ms)}</div>
+                    <div className="text-[11px] text-muted">{p.meetings}件 · {fmtMs(p.ms)}</div>
                   </div>
                 </div>
               ))}

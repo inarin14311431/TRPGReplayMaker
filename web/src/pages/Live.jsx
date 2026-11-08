@@ -21,7 +21,7 @@ export default function Live() {
     <Page>
       <PageHead
         title="録音状況"
-        subtitle={counts || 'Real-time view of in-progress recordings'}
+        subtitle={counts || '進行中の録音をリアルタイムで確認できます。'}
       />
       {error && (
         <div className="mb-5 text-sm text-error bg-error-soft rounded-sm px-3 py-2">{error}</div>

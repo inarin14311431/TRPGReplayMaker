@@ -58,7 +58,7 @@ export default function Login() {
 
         {defaultPasswordActive && (
           <p className="text-[11px] text-faint text-center leading-relaxed mt-5">
-            First time? The default account is <code className="text-muted">admin</code> / <code className="text-muted">admin</code>.
+            初回ログインには次のアカウントを使います。 <code className="text-muted">admin</code> / <code className="text-muted">admin</code>.
             ログイン直後にパスワードの変更画面が表示されます。
           </p>
         )}

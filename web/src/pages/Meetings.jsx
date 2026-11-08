@@ -75,7 +75,7 @@ export default function Meetings() {
     <Page>
       <PageHead
         title="録音一覧"
-        subtitle={meetings ? `${filtered.length} meeting${filtered.length === 1 ? '' : 's'}` : 'Loading…'}
+        subtitle={meetings ? `${filtered.length} meeting${filtered.length === 1 ? '' : 's'}` : '読み込み中…'}
         actions={
           <Toggle
             value={view}

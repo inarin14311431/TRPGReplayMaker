@@ -164,9 +164,9 @@ function KeyEditor({ provider, present, onChanged, autoEdit = false }) {
               type={reveal ? 'text' : 'password'} value={value} autoFocus
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { setEditing(false); setValue(''); } }}
-              placeholder={`Paste ${provider} API key…`} className="input !pr-10" />
+              placeholder={`貼り付け：${provider} APIキー…`} className="input !pr-10" />
             <button type="button" onClick={() => setReveal((r) => !r)}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink text-xs">{reveal ? 'Hide' : 'Show'}</button>
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink text-xs">{reveal ? '非表示' : '表示'}</button>
           </div>
           <button onClick={save} disabled={!value.trim() || busy} className="btn btn-primary !py-2">{busy ? '保存中…' : '保存'}</button>
           <button onClick={() => { setEditing(false); setValue(''); }} disabled={busy} className="btn btn-ghost !py-2">キャンセル</button>
@@ -260,7 +260,7 @@ function DeviceBadge({ device, model, batchSize }) {
   const detail = [model, batchSize ? `batch ${batchSize}` : null].filter(Boolean).join(' · ');
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full"
-      style={{ color, background: bg }} title={`STT on ${device}${detail ? ` (${detail})` : ''}`}>
+      style={{ color, background: bg }} title={`文字起こし稼働中 ${device}${detail ? ` (${detail})` : ''}`}>
       {label}{detail ? <span className="opacity-70">· {detail}</span> : null}
     </span>
   );
@@ -297,7 +297,7 @@ function ConnectionCard({ sys, onChanged }) {
           {bot?.guildCount > 0 && <span className="text-xs text-muted">{bot.guildCount} server{bot.guildCount === 1 ? '' : 's'}</span>}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={restart} disabled={restarting} className="btn btn-ghost !py-1.5">{restarting ? 'Reconnecting…' : '再接続'}</button>
+          <button onClick={restart} disabled={restarting} className="btn btn-ghost !py-1.5">{restarting ? '再接続中…' : '再接続'}</button>
           <button onClick={() => setOpen((o) => !o)} className="btn btn-ghost !py-1.5">{open ? '閉じる' : '接続情報を編集'}</button>
         </div>
       </div>
@@ -349,7 +349,7 @@ export default function Setup() {
     try {
       const r = await api.saveConfig(guildId, patch);
       setData((d) => ({ ...d, config: r.config }));
-      setMsg('Saved'); setMsgErr(false);
+      setMsg('保存しました'); setMsgErr(false);
       // Switching the transcription backend may have auto-started/stopped the
       // local sidecar; refresh system status so its pill reflects reality.
       if (patch.sttProvider !== undefined) refreshSys?.();

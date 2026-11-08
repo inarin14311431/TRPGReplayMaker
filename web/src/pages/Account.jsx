@@ -133,7 +133,7 @@ function AddUserForm({ onCreated }) {
       </div>
       {err && <p className="text-sm text-error sm:col-span-2">{err}</p>}
       <div className="sm:col-span-2 flex items-center gap-2">
-        <button type="submit" disabled={busy || !username.trim() || !password} className="btn btn-primary !py-2">{busy ? 'Creating…' : 'ユーザーを作成'}</button>
+        <button type="submit" disabled={busy || !username.trim() || !password} className="btn btn-primary !py-2">{busy ? '作成中…' : 'ユーザーを作成'}</button>
         <button type="button" onClick={() => setOpen(false)} className="btn btn-ghost !py-2">キャンセル</button>
       </div>
     </form>

@@ -107,7 +107,7 @@ function ProcessingCard({ session }) {
         <div className="flex flex-col items-end gap-3">
           <AvatarStack names={names} size={26} max={6} />
           <Link to={`/meetings/${session.meetingId}`} className="btn btn-ghost !py-1.5">
-            View meeting <Icon.Arrow width={14} height={14} />
+            録音を開く <Icon.Arrow width={14} height={14} />
           </Link>
         </div>
       </div>

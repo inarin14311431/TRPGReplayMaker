@@ -13,11 +13,11 @@ export default function NotFound() {
         <p className="font-display text-[64px] leading-none font-extrabold text-ink/90 tracking-tight">404</p>
         <h1 className="font-display text-[20px] font-bold text-ink mt-3">ページが見つかりません</h1>
         <p className="text-sm text-muted leading-relaxed mt-2">
-          We couldn't find <code className="text-ink-2 break-all">{pathname}</code>. It may have moved, or the link is wrong.
+          見つかりませんでした <code className="text-ink-2 break-all">{pathname}</code>. It may have moved, or the link is wrong.
         </p>
         <div className="flex items-center justify-center gap-2.5 mt-7">
           <Link to="/" className="btn btn-primary !py-2.5">
-            <Icon.Home width={16} height={16} /> Back to dashboard
+            <Icon.Home width={16} height={16} /> ホームへ戻る
           </Link>
           <Link to="/meetings" className="btn btn-ghost !py-2.5">
             <Icon.Meetings width={16} height={16} /> Meetings

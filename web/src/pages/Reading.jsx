@@ -30,7 +30,7 @@ const STATUS_COPY = {
 function RetryBanner({ meeting, retry, onDone }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
-  const copy = STATUS_COPY[meeting.status] || { title: '状態を確認してください', body: `Status: ${meeting.status}.` };
+  const copy = STATUS_COPY[meeting.status] || { title: '状態を確認してください', body: `状態を確認してください。` };
   const canRetry = retry?.eligible;
 
   async function run() {
@@ -166,13 +166,13 @@ function AskBox({ guildId, meetingId }) {
     <section className="mt-10 card p-5"
       style={{ background: 'linear-gradient(180deg, var(--primary-soft), transparent)' }}>
       <h2 className="flex items-center gap-2 text-sm font-bold text-ink mb-3">
-        <Icon.Sparkle width={16} height={16} className="text-primary" /> Ask this meeting
+        <Icon.Sparkle width={16} height={16} className="text-primary" /> この録音について質問
       </h2>
       <form onSubmit={(e) => { e.preventDefault(); ask(); }} className="flex gap-2">
         <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="この録音について質問…"
           disabled={loading} className="input flex-1" />
         <button type="submit" disabled={!question.trim() || loading} className="btn btn-primary">
-          {loading ? 'Asking…' : 'Ask'}
+          {loading ? '回答を取得中…' : '質問する'}
         </button>
       </form>
       {!answer && !loading && (
@@ -300,7 +300,7 @@ function Note({ data, todos, guildId, meetings, refetchTodos, onReload }) {
   return (
     <article className="max-w-[760px] mx-auto pb-12 animate-fade-up">
       <Link to="/meetings" className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-ink mb-5 no-underline">
-        <Icon.Arrow width={14} height={14} className="rotate-180" /> All meetings
+        <Icon.Arrow width={14} height={14} className="rotate-180" /> 録音一覧
       </Link>
 
       <header>
@@ -386,7 +386,7 @@ function Note({ data, todos, guildId, meetings, refetchTodos, onReload }) {
           {notes.actionItems?.length > 0 && (
             <section className="mt-9 card p-5">
               <h2 className="flex items-center gap-2 text-sm font-bold text-ink mb-4">
-                <Icon.CheckSquare width={16} height={16} className="text-primary" /> Action items
+                <Icon.CheckSquare width={16} height={16} className="text-primary" /> タスク
               </h2>
               <ul className="space-y-3">
                 {notes.actionItems.map((item) => {

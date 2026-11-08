@@ -41,7 +41,7 @@ function SecretField({ label, hint, present, value, onChange, placeholder }) {
           type={reveal ? 'text' : 'password'} value={value} placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)} className="input !pr-12" autoComplete="off" spellCheck={false} />
         <button type="button" onClick={() => setReveal((r) => !r)}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink text-xs">{reveal ? 'Hide' : 'Show'}</button>
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink text-xs">{reveal ? '非表示' : '表示'}</button>
       </div>
       {present && (
         <button type="button" onClick={() => { onChange(''); setEditing(false); }} className="text-xs text-muted hover:text-ink mt-1.5">既存のキーを使う</button>
@@ -55,7 +55,7 @@ function SecretField({ label, hint, present, value, onChange, placeholder }) {
  * `connection` object. Calls onSaved(result) after a successful save.
  * `compact` drops the in-card heading (Settings supplies its own).
  */
-export function ConnectionForm({ conn, onSaved, submitLabel = 'Save & connect' }) {
+export function ConnectionForm({ conn, onSaved, submitLabel = '保存して接続' }) {
   const [token, setToken] = useState('');
   const [clientId, setClientId] = useState(conn?.discordClientId?.value || '');
   const [sttUrl, setSttUrl] = useState(conn?.sttUrl?.value || '');

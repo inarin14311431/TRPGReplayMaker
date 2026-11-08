@@ -109,9 +109,9 @@ export function AvatarStack({ names = [], max = 4, size = 26 }) {
 /* ── Status pill ────────────────────────────────────────────────────────── */
 export function StatusPill({ status }) {
   const map = {
-    done: { label: 'Done', color: 'var(--accent)', bg: 'var(--accent-soft)' },
-    recording: { label: 'Recording', color: 'var(--error)', bg: 'var(--error-soft)' },
-    processing: { label: 'Processing', color: 'var(--warn)', bg: 'var(--warn-soft)' },
+    done: { label: '完了', color: 'var(--accent)', bg: 'var(--accent-soft)' },
+    recording: { label: '録音中', color: 'var(--error)', bg: 'var(--error-soft)' },
+    processing: { label: '処理中', color: 'var(--warn)', bg: 'var(--warn-soft)' },
     partial: { label: '一部のみ文字起こし済み', color: 'var(--warn)', bg: 'var(--warn-soft)' },
     transcription_failed: { label: '文字起こしに失敗', color: 'var(--error)', bg: 'var(--error-soft)' },
     summary_failed: { label: '要約に失敗', color: 'var(--error)', bg: 'var(--error-soft)' },

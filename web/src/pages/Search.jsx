@@ -80,7 +80,7 @@ export default function Search() {
       {loading ? <SearchSkeleton />
         : error ? <Empty icon={Icon.Search} title="検索に失敗しました" body={error} />
         : searched && rows.length === 0 ? (
-          <Empty icon={Icon.Search} title={`No matches${urlQ ? ` for "${urlQ}"` : ''}`} body="別のキーワードや短い語句で試してください。" />
+          <Empty icon={Icon.Search} title={`一致する発言がありません${urlQ ? `（「${urlQ}」）` : ''}`} body="別のキーワードや短い語句で試してください。" />
         ) : rows.length > 0 ? (
           <>
             <p className="text-xs text-muted mb-2 px-1">{rows.length} {rows.length === 1 ? 'result' : 'results'}</p>

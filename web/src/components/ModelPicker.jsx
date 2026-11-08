@@ -91,7 +91,7 @@ export function ModelPicker({ value, catalog, loading = false, onPick, onRefresh
   const source = catalog?.source;
   const hint = loading ? 'モデル一覧を読み込み中…'
     : source === 'live' ? `${models.length} model${models.length === 1 ? '' : 's'} available`
-    : catalog?.error ? `Catalog unavailable (${catalog.error}) — showing known models` : '';
+    : catalog?.error ? `モデル一覧を取得できません（${catalog.error}) — showing known models` : '';
 
   return (
     <div ref={boxRef} className="relative">
@@ -157,7 +157,7 @@ export function ModelPicker({ value, catalog, loading = false, onPick, onRefresh
           })}
           {results.length > shown.length && (
             <p className="px-2.5 py-1.5 text-xs text-muted">
-              +{results.length - shown.length} more — keep typing to narrow.
+              +{results.length - shown.length} 件あります。入力して絞り込んでください。
             </p>
           )}
         </div>
